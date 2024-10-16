@@ -31,25 +31,32 @@ export const Dashboard = (): JSX.Element => {
          </div>
       );
    return (
-      <>
-         <Card className="mt-4">
-            <Card.Header>At a glance</Card.Header>
-            <Card.Body>
-               {/** 4 cards, 2 on each row */}
-               <Container>
-                  <Row>
-                     {data !== null && typeof data === "object"
-                        ? Object.keys(data).map((key) => (
-                             <Col sm={6} lg={3} className="p-3">
+
+      <Card className="mt-4">
+         <Card.Header>At a glance</Card.Header>
+         <Card.Body>
+            {/** 4 cards, 2 on each row */}
+            <Container>
+               <Row>
+                  {data !== null && typeof data === "object"
+                     ? Object.keys(data).map((key) => {
+                        if (key==="ManualMode") return <></>
+                        return (
+                           <Col sm={6} lg={3} className="p-3" key={key}>
                               {/** @ts-ignore somehow broken*/}
-                                <Stat key={key} name={ThingToText[key]} value={data[key]} />
-                             </Col>
-                          ))
-                        : null}
-                  </Row>
-               </Container>
-            </Card.Body>
-         </Card>
-      </>
+                              <Stat key={key} name={ThingToText[key]} value={data[key]} />
+                           </Col>
+                        )
+                     })
+                     : null}
+               </Row>
+               <div className="text-center bolder">
+                  Manual mode: {data?.ManualMode ? <span>Enabled.<br/>Automations are ignored.</span> : "Disabled"}
+               </div>
+            </Container>
+
+         </Card.Body>
+      </Card>
+
    );
 };

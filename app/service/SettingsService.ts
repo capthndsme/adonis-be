@@ -2,6 +2,10 @@ import env from "#start/env";
 import { Bcrypt } from "@adonisjs/core/hash/drivers/bcrypt";
 import { existsSync, readFileSync, writeFileSync } from "fs";
 
+export type Clock = {
+  hours: number;
+  minutes: number;
+}
 export interface Setting {
 
   thresholds: {
@@ -13,6 +17,9 @@ export interface Setting {
       low: number;
     };
   };
+  waterTimes?: Clock[]
+  thresholdEnabled?: boolean;
+  timerBaseEnabled?: boolean;
   intervals: {
     soilMoistureCheck: number;
     tankLevelCheck: number;

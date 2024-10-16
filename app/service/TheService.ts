@@ -1,5 +1,6 @@
 
 
+import { DashData } from "../types/DashData.response.js";
 import GpioService, { GPIOMap, GPIOObjects } from "./GpioService.js";
 import SensorService, { Sensors } from "./SensorService.js";
 import SettingsService from "./SettingsService.js";
@@ -131,6 +132,17 @@ class TheService {
     console.log(`Manual switch toggled: ${relay} is now ${this.manualStates[relayKey] ? 'ON' : 'OFF'}`);
   }
 
+
+  getDashData(): DashData {
+ 
+    return {
+      HydrometerA: this.currentData?.sensors.soilMoisture.A,
+      HydrometerB: this.currentData?.sensors.soilMoisture.B,
+      UltrasonicA: this.currentData?.sensors.ultrasonic.mainTank,
+      UltrasonicB: this.currentData?.sensors.ultrasonic.secondTank,
+      ManualMode: GpioService.getManualMode()
+    }
+  }
 
 
 }

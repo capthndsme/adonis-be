@@ -12,10 +12,6 @@ import AuthService from '../service/AuthService.js';
 
 export default class AuthServiceMiddleware {
 
- 
-
-
-
   async handle(ctx: HttpContext, next: NextFn) {
     console.log("HANDLE is called");
     /**

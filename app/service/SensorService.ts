@@ -17,6 +17,7 @@ export type SerialCallbackFn = ((data: Sensors) => void)
 // Import the SerialPort class from the serialport module
 import { SerialPort } from "serialport"
 import SettingsService from "./SettingsService.js";
+import { normalize } from "../util.js";
 
 
 
@@ -96,16 +97,16 @@ class SerialPortReader {
           callback({
             sensors: {
               soilMoisture: {
-                // HydroA
-                A: numbers[0],
-                // HydroB
-                B: numbers[1],
+                // HydroA, clamp from 200 to 1023
+                A: normalize(numbers[0], 200, 1023),
+                // HydroB, clamp from 200 to 1023
+                B: normalize(numbers[1], 200, 1023),
               },
               ultrasonic: {
-                //USA
-                mainTank: numbers[2],
-                //USB
-                secondTank: numbers[3],
+                // mainTank, clamp from 0 to 1023
+                mainTank: normalize(numbers[2], 0, 1023),
+                // secondTank, clamp from 0 to 1023
+                secondTank: normalize(numbers[3], 0, 1023),
               },
 
             }
