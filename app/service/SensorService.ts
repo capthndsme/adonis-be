@@ -18,7 +18,7 @@ export type SerialCallbackFn = ((data: Sensors) => void)
 import { SerialPort } from "serialport"
 import SettingsService from "./SettingsService.js";
 import { normalize } from "../util.js";
-import { read } from "fs";
+ 
 
 
 
