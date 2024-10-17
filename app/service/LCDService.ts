@@ -40,7 +40,7 @@ class LCDService {
 
       this.#lcd.setCursorSync(0,2)
       this.#lcd.printSync(
-        ` H1: ${soilMoisture.A} H2: ${soilMoisture.B} U1: ${ultrasonic.mainTank} U2: ${ultrasonic.secondTank}`
+        ` H1: ${soilMoisture.A?.toFixed(0)} H2: ${soilMoisture?.B?.toFixed(0)} U1: ${ultrasonic.mainTank?.toFixed(0)} U2: ${ultrasonic.secondTank?.toFixed(0)}`
       )
     }
   }
