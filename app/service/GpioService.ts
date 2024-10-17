@@ -20,6 +20,14 @@ class GpioService {
       rpio.open(GPIOMap.outflowB, rpio.OUTPUT, 0)
       rpio.open(GPIOMap.rainwaterToMain, rpio.OUTPUT, 0)
       rpio.open(GPIOMap.tapToMain, rpio.OUTPUT, 0)
+
+
+      // manual
+
+      rpio.open(GPIOMap.outflowAManual, rpio.INPUT, rpio.PULL_UP)
+      rpio.open(GPIOMap.outflowBManual, rpio.INPUT, rpio.PULL_UP)
+      rpio.open(GPIOMap.tapManual, rpio.INPUT, rpio.PULL_UP)
+      rpio.open(GPIOMap.rainwaterManual, rpio.INPUT, rpio.PULL_UP)
   
       this.loop();
     }, 3000)
