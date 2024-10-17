@@ -10,7 +10,7 @@ class GpioService {
   initialise() {
     console.log(`ManualMode: init`)
     rpio.init({
-      gpiomem: true,
+      gpiomem: false,
       mapping: 'gpio'
     })
 
