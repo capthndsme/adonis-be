@@ -2,6 +2,7 @@
 
 import { DashData } from "../types/DashData.response.js";
 import GpioService, { GPIOMap, GPIOObjects } from "./GpioService.js";
+import LCDService from "./LCDService.js";
 import SensorService, { Sensors } from "./SensorService.js";
 import SettingsService from "./SettingsService.js";
 
@@ -37,6 +38,10 @@ class TheService {
     SensorService.startListening()
     SensorService.registerCallback((data: Sensors) => {
       this.currentData = data;
+      LCDService.update({
+        ...data,
+        ManualMode: GpioService.getManualMode()
+      })
     })
     GpioService.initialise();
     await this.dataLoop();
