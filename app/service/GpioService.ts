@@ -13,14 +13,16 @@ class GpioService {
       gpiomem: false,
       mapping: 'gpio'
     })
-
-    rpio.open(GPIOMap.manualMode, rpio.INPUT, rpio.PULL_UP)
-    rpio.open(GPIOMap.outflowA, rpio.OUTPUT, 0)
-    rpio.open(GPIOMap.outflowB, rpio.OUTPUT, 0)
-    rpio.open(GPIOMap.rainwaterToMain, rpio.OUTPUT, 0)
-    rpio.open(GPIOMap.tapToMain, rpio.OUTPUT, 0)
-
-    this.loop();
+    console.log("Delay starter")
+    setTimeout(() => {
+      rpio.open(GPIOMap.manualMode, rpio.INPUT, rpio.PULL_UP)
+      rpio.open(GPIOMap.outflowA, rpio.OUTPUT, 0)
+      rpio.open(GPIOMap.outflowB, rpio.OUTPUT, 0)
+      rpio.open(GPIOMap.rainwaterToMain, rpio.OUTPUT, 0)
+      rpio.open(GPIOMap.tapToMain, rpio.OUTPUT, 0)
+  
+      this.loop();
+    }, 3000)
   }
 
   async loop() {
