@@ -5,10 +5,10 @@ import LCD from 'raspberrypi-liquid-crystal'
 class LCDService {
 
   readonly #lcd: LCD;
-  readonly #RPI = false;
+  readonly #RPI = existsSync('/dev/i2c-1');
 
   constructor() {
-    console.log(existsSync('/dev/i2c-1'))
+   
     this.#lcd = new LCD( 1, 0x26, 16, 2 );
     if (this.#RPI)
       this.#lcd.beginSync();
