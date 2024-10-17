@@ -39,20 +39,26 @@ export const Dashboard = (): JSX.Element => {
             <Container>
                <Row>
                   {data !== null && typeof data === "object"
-                     ? Object.keys(data).map((key) => {
-                        if (key==="ManualMode") return <></>
-                        return (
-                           <Col sm={6} lg={3} className="p-3" key={key}>
-                              {/** @ts-ignore somehow broken*/}
-                              <Stat key={key} name={ThingToText[key]} value={data[key]} />
-                           </Col>
-                        )
-                     })
+                     ?
+                     Object.keys(data).map(
+                        /** @ts-ignore we simply strongly type it, but string callback is incompatible. */
+                        (key: keyof DashData) => {
+                           if (key === "ManualMode" || key === "LastStates") return <></>
+                           return (
+                              <Col sm={6} lg={3} className="p-3" key={key}>
+                                 {/** @ts-ignore somehow broken*/}
+                                 <Stat key={key} name={ThingToText[key]} value={data[key]} />
+                              </Col>
+                           )
+                        })
                      : null}
                </Row>
                <div className="text-center bolder">
-                  Manual mode: {data?.ManualMode ? <span>Enabled.<br/>Automations are ignored.</span> : "Disabled"}
+                  Manual mode: {data?.ManualMode ? <span>Enabled.<br />Automations are ignored.</span> : "Disabled"}
                </div>
+               <Row>
+                  
+               </Row>
             </Container>
 
          </Card.Body>

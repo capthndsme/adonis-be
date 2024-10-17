@@ -40,7 +40,8 @@ class TheService {
       this.currentData = data;
       LCDService.update({
         ...data,
-        ManualMode: GpioService.getManualMode()
+        ManualMode: GpioService.getManualMode(),
+        LastStates: GpioService.getLastStates()
       })
     })
     GpioService.initialise();
@@ -67,34 +68,34 @@ class TheService {
 
     // Check soil moisture A
     if (sensors.soilMoisture.A < thresholds.soilMoisture.low) {
-      GpioService.writeGpio('outflowA', 1);
+      GpioService.writeGpio('outflowA', 0);
       console.log("Turning on Outflow A");
     } else if (sensors.soilMoisture.A >= thresholds.soilMoisture.high) {
-      GpioService.writeGpio('outflowA', 0);
+      GpioService.writeGpio('outflowA', 1);
       console.log("Turning off Outflow A");
     }
 
     // Check soil moisture B
     if (sensors.soilMoisture.B < thresholds.soilMoisture.low) {
-      GpioService.writeGpio('outflowB', 1);
+      GpioService.writeGpio('outflowB', 0);
       console.log("Turning on Outflow B");
     } else if (sensors.soilMoisture.B >= thresholds.soilMoisture.high) {
-      GpioService.writeGpio('outflowB', 0);
+      GpioService.writeGpio('outflowB', 1);
       console.log("Turning off Outflow B");
     }
 
     // Check main tank level
     if (sensors.ultrasonic.mainTank < thresholds.tankLevel.low) {
       if (sensors.ultrasonic.secondTank > 0) {
-        GpioService.writeGpio('rainwaterToMain', 1);
+        GpioService.writeGpio('rainwaterToMain', 0);
         console.log("Transferring water from second tank to main tank");
       } else {
-        GpioService.writeGpio('tapToMain', 1);
+        GpioService.writeGpio('tapToMain', 0);
         console.log("Transferring water from tap to main tank");
       }
     } else {
-      GpioService.writeGpio('rainwaterToMain', 0);
-      GpioService.writeGpio('tapToMain', 0);
+      GpioService.writeGpio('rainwaterToMain', 1);
+      GpioService.writeGpio('tapToMain', 1);
       console.log("Main tank level is sufficient, stopping water transfer");
     }
 
@@ -145,7 +146,8 @@ class TheService {
       HydrometerB: this.currentData?.sensors.soilMoisture.B,
       UltrasonicA: this.currentData?.sensors.ultrasonic.mainTank,
       UltrasonicB: this.currentData?.sensors.ultrasonic.secondTank,
-      ManualMode: GpioService.getManualMode()
+      ManualMode: GpioService.getManualMode(),
+      LastStates: GpioService.getLastStates()
     }
   }
 

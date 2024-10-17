@@ -10,6 +10,7 @@ export default class AuthController {
       response.status(201).send(s);
     } catch (e) {
       response.status(403).send("Invalid password")
+      console.log('inval pass', e)
     }
     
   

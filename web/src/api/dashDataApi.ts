@@ -18,6 +18,8 @@ export const getPercentileData = async () => {
     HydrometerB: res.HydrometerB ? (res.HydrometerB / HYDROMETER_MAX * 100) : 0,
     UltrasonicA: res.UltrasonicA ? (res.UltrasonicA / ULTRASONIC_MAX * 100) : 0,
     UltrasonicB: res.UltrasonicB ? (res.UltrasonicB / ULTRASONIC_MAX * 100) : 0,
-    ManualMode: res.ManualMode
+    ManualMode: res.ManualMode,
+    LastStates: res.LastStates
+    
   } as const as DashData;
 };

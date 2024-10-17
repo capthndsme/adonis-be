@@ -2,10 +2,24 @@ import rpio from 'rpio'
 class GpioService {
   #manualMode = false;
 
+  #lastStates: Partial<Record<GPIOObjects, number>> = {
+    outflowA: 0,
+    outflowB: 0,
+    rainwaterToMain: 0,
+    tapToMain: 0,
+  }
+  
   getManualMode() {
     return this.#manualMode;
   }
 
+  getLastState(pin: GPIOObjects) {
+    return this.#lastStates[pin];
+  }
+
+  getLastStates() {
+    return this.#lastStates;
+  }
 
   initialise() {
     console.log(`ManualMode: init`)
@@ -57,8 +71,8 @@ class GpioService {
   }
 
   writeGpio(pin: GPIOObjects, state: 0 | 1) {
-    console.log(``)
     rpio.write(GPIOMap[pin], state);
+    this.#lastStates[pin] = state;
   }
 
   readGpio(pin: GPIOObjects) {

@@ -3,5 +3,12 @@ export type DashData = {
   HydrometerB?: number,
   UltrasonicA?: number,
   UltrasonicB?: number,
-  ManualMode?: boolean
+  ManualMode?: boolean,
+  LastStates?: {
+    outflowA: number,
+    outflowB: number,
+    rainwaterToMain: number,
+    tapToMain: number
+  }
 }
+
