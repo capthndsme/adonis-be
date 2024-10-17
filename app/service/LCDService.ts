@@ -8,7 +8,7 @@ class LCDService {
   readonly #RPI = existsSync('/dev/i2c-1')
 
   constructor() {
-    this.#lcd = new LCD( 1, 0x27, 16, 2 );
+    this.#lcd = new LCD( 1, 0x26, 16, 2 );
     if (this.#RPI)
       this.#lcd.beginSync();
     else 
