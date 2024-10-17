@@ -150,7 +150,7 @@ reader.read().then(({ value, done }) => {
         this._INTERNAL_LISTENER(simulatedData);
       }, 1000);
     } else if (port) {
-      port.on("data", this._INTERNAL_LISTENER);
+      port.on("data", this._INTERNAL_LISTENER.bind(this));
     }
   }
 
@@ -162,7 +162,7 @@ reader.read().then(({ value, done }) => {
         console.log("[SerialPortReader.ts] Stopped simulating USB port data.");
       }
     } else if (port) {
-      port.off("data", this._INTERNAL_LISTENER);
+      port.off("data", this._INTERNAL_LISTENER.bind(this));
     }
   }
 }
