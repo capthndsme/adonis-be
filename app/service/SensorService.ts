@@ -18,6 +18,7 @@ export type SerialCallbackFn = ((data: Sensors) => void)
 import { SerialPort } from "serialport"
 import SettingsService from "./SettingsService.js";
 import { normalize } from "../util.js";
+import { read } from "fs";
 
 
 
@@ -74,7 +75,12 @@ class SerialPortReader {
   removeCallback(callback: SerialCallbackFn) {
     callbacks = callbacks.filter(cb => cb !== callback)
   }
-
+  lastKnownValues = {
+    A: 0,
+    B: 0,
+    mainTank: 0,
+    secondTank: 0,
+  };
   _INTERNAL_LISTENER(data: Buffer) {
     const textDecoder = new TextDecoder();
     const text = textDecoder.decode(data);
@@ -90,30 +96,41 @@ class SerialPortReader {
       .pipeThrough(new TransformStream(lineBreakTransformer))
       .getReader();
 
-    reader.read().then(({ value, done }) => {
-      if (!done && value) {
-        const numbers = value.split(" ").map(Number);
-        for (const callback of callbacks) {
-          callback({
-            sensors: {
-              soilMoisture: {
-                // HydroA, clamp from 200 to 1023
-                A: normalize(numbers[0], 200, 1023),
-                // HydroB, clamp from 200 to 1023
-                B: normalize(numbers[1], 200, 1023),
-              },
-              ultrasonic: {
-                // mainTank, clamp from 0 to 1023
-                mainTank: normalize(numbers[2], 0, 1023),
-                // secondTank, clamp from 0 to 1023
-                secondTank: normalize(numbers[3], 0, 1023),
-              },
+reader.read().then(({ value, done }) => {
+  if (!done && value) {
+    const numbers = value.split(" ").map(Number);
 
-            }
-          });
+    const newValues = {
+      A: normalize(numbers[0], 0, 100),         // Moisture sensor A
+      B: normalize(numbers[1], 0, 100),         // Moisture sensor B
+      mainTank: normalize(numbers[2], 0, 450),  // Ultrasonic mainTank
+      secondTank: normalize(numbers[3], 0, 450) // Ultrasonic secondTank
+    };
+
+    // Use last known good value if the new one is NaN
+    this.lastKnownValues = {
+      A: isNaN(newValues.A) ? this.lastKnownValues.A : newValues.A,
+      B: isNaN(newValues.B) ? this.lastKnownValues.B : newValues.B,
+      mainTank: isNaN(newValues.mainTank) ? this.lastKnownValues.mainTank : newValues.mainTank,
+      secondTank: isNaN(newValues.secondTank) ? this.lastKnownValues.secondTank : newValues.secondTank,
+    };
+
+    for (const callback of callbacks) {
+      callback({
+        sensors: {
+          soilMoisture: {
+            A: this.lastKnownValues.A,
+            B: this.lastKnownValues.B,
+          },
+          ultrasonic: {
+            mainTank: this.lastKnownValues.mainTank,
+            secondTank: this.lastKnownValues.secondTank,
+          },
         }
-      }
-    });
+      });
+    }
+  }
+});
   }
 
   startListening() {
