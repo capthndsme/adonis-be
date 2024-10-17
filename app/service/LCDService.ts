@@ -30,17 +30,19 @@ class LCDService {
       ManualMode,
       
     } = data;
-    this.#lcd.clearSync();
+ 
     if (ManualMode) {
+      this.#lcd.setCursorSync(0,0)
+      this.#lcd.printSync("Manual                ")
       this.#lcd.setCursorSync(0,1)
-      this.#lcd.printSync("Manual")
+      this.#lcd.printSync(`                  `)
     } else {
-      this.#lcd.setCursorSync(0,1)
-      this.#lcd.printSync("Auto")
+      this.#lcd.setCursorSync(0,0)
+      this.#lcd.printSync(`AUTO R1:${soilMoisture.A?.toFixed(0)} R2:${soilMoisture.B?.toFixed(0)}`)
 
-      this.#lcd.setCursorSync(0,2)
+      this.#lcd.setCursorSync(0,1)
       this.#lcd.printSync(
-        ` H1: ${soilMoisture.A?.toFixed(0)} H2: ${soilMoisture?.B?.toFixed(0)} U1: ${ultrasonic.mainTank?.toFixed(0)} U2: ${ultrasonic.secondTank?.toFixed(0)}`
+        `T1: ${ultrasonic.mainTank?.toFixed(0)} T2: ${ultrasonic.secondTank?.toFixed(0)}`
       )
     }
   }

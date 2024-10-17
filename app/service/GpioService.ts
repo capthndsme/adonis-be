@@ -57,6 +57,7 @@ class GpioService {
   }
 
   writeGpio(pin: GPIOObjects, state: 0 | 1) {
+    console.log(``)
     rpio.write(GPIOMap[pin], state);
   }
 
@@ -73,7 +74,7 @@ export default new GpioService();
 export const GPIOMap = {
   outflowA: 4,
   outflowB: 17,
-  rainwaterToMain: 27,
+  rainwaterToMain: 26,
   tapToMain: 22,
   manualMode: 23,
   outflowAManual: 24,
