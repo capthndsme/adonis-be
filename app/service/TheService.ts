@@ -1,6 +1,5 @@
 
-
-import { log } from "console";
+ 
 import { DashData } from "../types/DashData.response.js";
 import GpioService, { GPIOMap, GPIOObjects } from "./GpioService.js";
 import LCDService from "./LCDService.js";
