@@ -25,30 +25,14 @@ import { normalize } from "../util.js";
 const SIMULATE_USB = SettingsService.getSettings().simulator;
 
 // Define a LineBreakTransformer class to split the data into lines
-class LineBreakTransformer {
-  private chunks: string;
-
-  constructor() {
-    this.chunks = "";
-  }
-
-  transform(chunk: string, controller: TransformStreamDefaultController) {
-    this.chunks += chunk;
-    const lines = this.chunks.split("\r\n");
-    this.chunks = lines.pop() ?? "";
-    lines.forEach((line) => controller.enqueue(line));
-  }
-
-  flush(controller: TransformStreamDefaultController) {
-    controller.enqueue(this.chunks);
-  }
-}
+ 
 
 let port: SerialPort | null = null;
 let callbacks: SerialCallbackFn[] = [];
 let simulationInterval: NodeJS.Timeout | null = null; // Store interval for clearing
 
-class SerialPortReader {
+class SerialPortReader { 
+   private buffer: string = '';
   constructor() {
     if (!SIMULATE_USB) {
       try {
@@ -81,59 +65,55 @@ class SerialPortReader {
     secondTank: 0,
   };
 
-  _INTERNAL_LISTENER(data: Buffer) {
+ _INTERNAL_LISTENER(data: Buffer) {
     const textDecoder = new TextDecoder();
     const text = textDecoder.decode(data);
+    
+    // Append new data to the buffer
+    this.buffer += text;
 
-    const lineBreakTransformer = new LineBreakTransformer();
-    const readableStream = new ReadableStream({
-      start(controller) {
-        controller.enqueue(text);
-        controller.close();
-      },
-    });
-    const reader = readableStream
-      .pipeThrough(new TransformStream(lineBreakTransformer))
-      .getReader();
+    // Process complete lines
+    const lines = this.buffer.split('\n');
+    // Keep the last potentially incomplete line in the buffer
+    this.buffer = lines.pop() || '';
 
-    reader.read().then(({ value, done }) => {
-      if (!done && value) {
-        const numbers = value.split(/\s+/).map(Number).filter((n: number) => !isNaN(n));
+    lines.forEach(line => this.processLine(line.trim()));
+  }
 
-        if (numbers.length >= 2 && numbers.length <= 4) {
-          const newValues = {
-            A: normalize(numbers[0], 0, 100),
-            B: normalize(numbers[1], 0, 100),
-            mainTank: numbers[2] ? normalize(numbers[2], 0, 450) : this.lastKnownValues.mainTank,
-            secondTank: numbers[3] ? normalize(numbers[3], 0, 450) : this.lastKnownValues.secondTank
-          };
+  private processLine(line: string) {
+    if (line === '') return;
 
-          this.lastKnownValues = {
-            A: newValues.A,
-            B: newValues.B,
-            mainTank: newValues.mainTank,
-            secondTank: newValues.secondTank,
-          };
+    const numbers = line.split(/\s+/).map(Number);
 
-          for (const callback of callbacks) {
-            callback({
-              sensors: {
-                soilMoisture: {
-                  A: this.lastKnownValues.A,
-                  B: this.lastKnownValues.B,
-                },
-                ultrasonic: {
-                  mainTank: this.lastKnownValues.mainTank,
-                  secondTank: this.lastKnownValues.secondTank,
-                },
-              }
-            });
+    if (numbers.length === 4 && numbers.every(n => !isNaN(n))) {
+      const [hydroA, hydroB, ultraA, ultraB] = numbers;
+
+      const newValues = {
+        A: normalize(hydroA, 0, 100),
+        B: normalize(hydroB, 0, 100),
+        mainTank: normalize(ultraA, 0, 450),
+        secondTank: normalize(ultraB, 0, 450)
+      };
+
+      this.lastKnownValues = { ...newValues };
+
+      for (const callback of callbacks) {
+        callback({
+          sensors: {
+            soilMoisture: {
+              A: this.lastKnownValues.A,
+              B: this.lastKnownValues.B,
+            },
+            ultrasonic: {
+              mainTank: this.lastKnownValues.mainTank,
+              secondTank: this.lastKnownValues.secondTank,
+            },
           }
-        } else {
-          console.warn(`[SerialPortReader.ts] Received unexpected number of values: ${numbers.length}`);
-        }
+        });
       }
-    });
+    } else {
+      console.warn(`[SerialPortReader.ts] Received invalid data: ${line}`);
+    }
   }
 
   startListening() {
