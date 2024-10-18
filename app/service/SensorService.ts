@@ -21,7 +21,6 @@ import { normalize } from "../util.js";
  
 
 
-
 // Flag to simulate USB port
 const SIMULATE_USB = SettingsService.getSettings().simulator;
 
@@ -81,6 +80,7 @@ class SerialPortReader {
     mainTank: 0,
     secondTank: 0,
   };
+
   _INTERNAL_LISTENER(data: Buffer) {
     const textDecoder = new TextDecoder();
     const text = textDecoder.decode(data);
@@ -96,41 +96,44 @@ class SerialPortReader {
       .pipeThrough(new TransformStream(lineBreakTransformer))
       .getReader();
 
-reader.read().then(({ value, done }) => {
-  if (!done && value) {
-    const numbers = value.split(" ").map(Number);
+    reader.read().then(({ value, done }) => {
+      if (!done && value) {
+        const numbers = value.split(/\s+/).map(Number).filter((n: number) => !isNaN(n));
 
-    const newValues = {
-      A: normalize(numbers[0], 0, 100),         // Moisture sensor A
-      B: normalize(numbers[1], 0, 100),         // Moisture sensor B
-      mainTank: normalize(numbers[2], 0, 450),  // Ultrasonic mainTank
-      secondTank: normalize(numbers[3], 0, 450) // Ultrasonic secondTank
-    };
+        if (numbers.length >= 2 && numbers.length <= 4) {
+          const newValues = {
+            A: normalize(numbers[0], 0, 100),
+            B: normalize(numbers[1], 0, 100),
+            mainTank: numbers[2] ? normalize(numbers[2], 0, 450) : this.lastKnownValues.mainTank,
+            secondTank: numbers[3] ? normalize(numbers[3], 0, 450) : this.lastKnownValues.secondTank
+          };
 
-    // Use last known good value if the new one is NaN
-    this.lastKnownValues = {
-      A: isNaN(newValues.A) ? this.lastKnownValues.A : newValues.A,
-      B: isNaN(newValues.B) ? this.lastKnownValues.B : newValues.B,
-      mainTank: isNaN(newValues.mainTank) ? this.lastKnownValues.mainTank : newValues.mainTank,
-      secondTank: isNaN(newValues.secondTank) ? this.lastKnownValues.secondTank : newValues.secondTank,
-    };
+          this.lastKnownValues = {
+            A: newValues.A,
+            B: newValues.B,
+            mainTank: newValues.mainTank,
+            secondTank: newValues.secondTank,
+          };
 
-    for (const callback of callbacks) {
-      callback({
-        sensors: {
-          soilMoisture: {
-            A: this.lastKnownValues.A,
-            B: this.lastKnownValues.B,
-          },
-          ultrasonic: {
-            mainTank: this.lastKnownValues.mainTank,
-            secondTank: this.lastKnownValues.secondTank,
-          },
+          for (const callback of callbacks) {
+            callback({
+              sensors: {
+                soilMoisture: {
+                  A: this.lastKnownValues.A,
+                  B: this.lastKnownValues.B,
+                },
+                ultrasonic: {
+                  mainTank: this.lastKnownValues.mainTank,
+                  secondTank: this.lastKnownValues.secondTank,
+                },
+              }
+            });
+          }
+        } else {
+          console.warn(`[SerialPortReader.ts] Received unexpected number of values: ${numbers.length}`);
         }
-      });
-    }
-  }
-});
+      }
+    });
   }
 
   startListening() {
