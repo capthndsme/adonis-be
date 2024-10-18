@@ -5,7 +5,10 @@ export type Sensors = {
       B: number;
     };
     ultrasonic: {
+      /** RAINWATER */
       mainTank: number;
+    
+      /** TAPWATER */
       secondTank: number;
     };
   };

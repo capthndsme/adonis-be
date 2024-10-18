@@ -1,5 +1,6 @@
 
 
+import { log } from "console";
 import { DashData } from "../types/DashData.response.js";
 import GpioService, { GPIOMap, GPIOObjects } from "./GpioService.js";
 import LCDService from "./LCDService.js";
@@ -84,20 +85,7 @@ class TheService {
       console.log("Turning off Outflow B");
     }
 
-    // Check main tank level
-    if (sensors.ultrasonic.mainTank < thresholds.tankLevel.low) {
-      if (sensors.ultrasonic.secondTank > 0) {
-        GpioService.writeGpio('rainwaterToMain', 0);
-        console.log("Transferring water from second tank to main tank");
-      } else {
-        GpioService.writeGpio('tapToMain', 0);
-        console.log("Transferring water from tap to main tank");
-      }
-    } else {
-      GpioService.writeGpio('rainwaterToMain', 1);
-      GpioService.writeGpio('tapToMain', 1);
-      console.log("Main tank level is sufficient, stopping water transfer");
-    }
+    this.controlWaterTransfer(sensors)
 
     console.log("Data check completed");
   }
@@ -113,7 +101,7 @@ class TheService {
   private checkManualSwitches() {
     if (!GpioService.getManualMode()) return;
 
-    const manualSwitches: Array<{ pin: GPIOObjects, relay: GPIOObjects }>= [
+    const manualSwitches: Array<{ pin: GPIOObjects, relay: GPIOObjects }> = [
       { pin: 'outflowAManual', relay: 'outflowA' },
       { pin: 'outflowBManual', relay: 'outflowB' },
       { pin: 'tapManual', relay: 'tapToMain' },
@@ -139,8 +127,40 @@ class TheService {
   }
 
 
+  // Assume this function is called every 3 seconds
+  controlWaterTransfer(sensors: {
+    soilMoisture: { A: number; B: number };
+    ultrasonic: {
+      mainTank: number;  // T2
+      secondTank: number;  // T1
+    };
+  }) {
+    const T2 = sensors.ultrasonic.mainTank;
+    const T1 = sensors.ultrasonic.secondTank;
+
+    // Control rainwater to main tank transfer
+    if (T2 < 30) {
+      GpioService.writeGpio('rainwaterToMain', 0);  // Open valve
+      console.log("Opening rainwater to main tank transfer");
+    } else if (T2 >= 80) {
+      GpioService.writeGpio('rainwaterToMain', 1);  // Close valve
+      console.log("Closing rainwater to main tank transfer");
+    }
+
+    // Control tap water to main tank transfer
+    if (T2 < 20) {
+      GpioService.writeGpio('tapToMain', 0);  // Open valve
+      console.log("Opening tap water to main tank transfer");
+    } else if (T2 >= 20) {
+      GpioService.writeGpio('tapToMain', 1);  // Close valve
+      console.log("Closing tap water to main tank transfer");
+    }
+
+    // Log current levels
+    console.log(`Current levels - Main Tank (T2): ${T2}%, Second Tank (T1): ${T1}%`);
+  }
   getDashData(): DashData {
- 
+
     return {
       HydrometerA: this.currentData?.sensors.soilMoisture.A,
       HydrometerB: this.currentData?.sensors.soilMoisture.B,

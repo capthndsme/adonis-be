@@ -43,7 +43,7 @@ class LCDService {
       const tapIndicator = data.LastStates?.tapToMain === 0 ? 'T1 ON' : 'T1 OFF';
       const rainwaterIndicator = data.LastStates?.rainwaterToMain === 0 ? 'T2 ON' : 'T2 OFF';
       this.#lcd.setCursorSync(0,0)
-      this.#lcd.printSync(`Manual ${outflowAIndicator} ${outflowBIndicator}              `)
+      this.#lcd.printSync(`MAN ${outflowAIndicator} ${outflowBIndicator}              `)
       this.#lcd.setCursorSync(0,1)
       this.#lcd.printSync(`${tapIndicator} ${rainwaterIndicator}                  `)
     } else {
@@ -52,7 +52,7 @@ class LCDService {
 
       this.#lcd.setCursorSync(0,1)
       this.#lcd.printSync(
-        `T1: ${ultrasonic.mainTank?.toFixed(0)} T2: ${ultrasonic.secondTank?.toFixed(0)}     `
+        `T1: ${ultrasonic.secondTank?.toFixed(0)} T2: ${ultrasonic.mainTank?.toFixed(0)}     `
       )
     }
   }
