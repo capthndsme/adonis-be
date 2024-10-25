@@ -1,5 +1,8 @@
-import rpio from 'rpio'
+import pigpio from 'pigpio';
 import LogService from './LogService.js';
+
+const { Gpio } = pigpio;
+
 class GpioService {
   #manualMode = false;
 
@@ -8,8 +11,8 @@ class GpioService {
     outflowB: 0,
     rainwaterToMain: 0,
     tapToMain: 0,
-  }
-  
+  };
+
   getManualMode() {
     return this.#manualMode;
   }
@@ -23,44 +26,45 @@ class GpioService {
   }
 
   initialise() {
-    console.log(`ManualMode: init`)
-    rpio.init({
-      gpiomem: false,
-      mapping: 'gpio'
-    })
-    console.log("Delay starter")
-    setTimeout(() => {
-      rpio.open(GPIOMap.manualMode, rpio.INPUT, rpio.PULL_UP)
-      rpio.open(GPIOMap.outflowA, rpio.OUTPUT, 0)
-      rpio.open(GPIOMap.outflowB, rpio.OUTPUT, 0)
-      rpio.open(GPIOMap.rainwaterToMain, rpio.OUTPUT, 0)
-      rpio.open(GPIOMap.tapToMain, rpio.OUTPUT, 0)
+    console.log(`ManualMode: init`);
 
+    console.log("Delay starter");
+    setTimeout(() => {
+      // Initialize GPIO pins
+      this.initPin(GPIOMap.manualMode, Gpio.INPUT, { pullUpDown: Gpio.PUD_UP });
+      this.initPin(GPIOMap.outflowA, Gpio.OUTPUT);
+      this.initPin(GPIOMap.outflowB, Gpio.OUTPUT);
+      this.initPin(GPIOMap.rainwaterToMain, Gpio.OUTPUT);
+      this.initPin(GPIOMap.tapToMain, Gpio.OUTPUT);
 
       // manual
+      this.initPin(GPIOMap.outflowAManual, Gpio.INPUT, { pullUpDown: Gpio.PUD_UP });
+      this.initPin(GPIOMap.outflowBManual, Gpio.INPUT, { pullUpDown: Gpio.PUD_UP });
+      this.initPin(GPIOMap.tapManual, Gpio.INPUT, { pullUpDown: Gpio.PUD_UP });
+      this.initPin(GPIOMap.rainwaterManual, Gpio.INPUT, { pullUpDown: Gpio.PUD_UP });
 
-      rpio.open(GPIOMap.outflowAManual, rpio.INPUT, rpio.PULL_UP)
-      rpio.open(GPIOMap.outflowBManual, rpio.INPUT, rpio.PULL_UP)
-      rpio.open(GPIOMap.tapManual, rpio.INPUT, rpio.PULL_UP)
-      rpio.open(GPIOMap.rainwaterManual, rpio.INPUT, rpio.PULL_UP)
-  
       this.loop();
-    }, 3000)
+    }, 3000);
+  }
+
+  initPin(pin: number, mode: number, options?: { pullUpDown: number }) {
+    const gpio = new Gpio(pin, { mode, ...options });
+    return gpio;
   }
 
   async loop() {
     try {
       await this.checkManualMode();
- 
-    } catch(e) {
-      console.error(`error while looping gpio`)
-      console.error(e)
+    } catch (e) {
+      console.error(`error while looping gpio`);
+      console.error(e);
     }
-    setTimeout(() => this.loop(), 1000)
+    setTimeout(() => this.loop(), 1000);
   }
 
   async checkManualMode() {
-    const manualModeValue = rpio.read(GPIOMap.manualMode);
+    const manualModePin = new Gpio(GPIOMap.manualMode, { mode: Gpio.INPUT, pullUpDown: Gpio.PUD_UP });
+    const manualModeValue = manualModePin.digitalRead();
     /**
      * Pullup mode => 0 means TRUE
      */
@@ -72,7 +76,8 @@ class GpioService {
   }
 
   writeGpio(pin: GPIOObjects, state: 0 | 1, auto?: boolean) {
-    rpio.write(GPIOMap[pin], state);
+    const gpio = new Gpio(GPIOMap[pin], { mode: Gpio.OUTPUT });
+    gpio.digitalWrite(state);
 
     this.#lastStates[pin] = state;
     if (auto) {
@@ -81,19 +86,17 @@ class GpioService {
         null,
         `Automation ${pin} set to ${state ? 'OFF' : 'ON'}`,
         null
-      )
+      );
     }
   }
 
   readGpio(pin: GPIOObjects) {
-    return rpio.read(GPIOMap[pin]);
+    const gpio = new Gpio(GPIOMap[pin], { mode: Gpio.INPUT });
+    return gpio.digitalRead();
   }
 }
 
-
 export default new GpioService();
-
- 
 
 export const GPIOMap = {
   outflowA: 4,
@@ -104,7 +107,7 @@ export const GPIOMap = {
   outflowAManual: 24,
   outflowBManual: 25,
   tapManual: 5,
-  rainwaterManual: 6
-}
+  rainwaterManual: 6,
+};
 
-export type GPIOObjects = keyof typeof GPIOMap
+export type GPIOObjects = keyof typeof GPIOMap;
