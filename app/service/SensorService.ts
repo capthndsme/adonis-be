@@ -5,10 +5,10 @@ export type Sensors = {
       B: number;
     };
     ultrasonic: {
-      /** RAINWATER */
+      /** RAIN WATER (UT1)*/
       mainTank: number;
     
-      /** TAPWATER */
+      /** MAIN WATER (UT2) */
       secondTank: number;
     };
   };
@@ -78,7 +78,7 @@ class SerialPortReader {
     // Process complete lines
     const lines = this.buffer.split('\n');
     // Keep the last potentially incomplete line in the buffer
-    this.buffer = lines.pop() || '';
+    this.buffer = lines.pop() ?? '';
 
     lines.forEach(line => this.processLine(line.trim()));
   }

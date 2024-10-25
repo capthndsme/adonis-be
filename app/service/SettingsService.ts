@@ -52,8 +52,10 @@ class Settings {
             high: 100
           },
           tankLevel: {
-            low: 20
-          }
+            low: 20,
+          }, 
+          // secondTankLevel
+          /** SOLENOID */
         },
         intervals: {
           soilMoistureCheck: 4000,
