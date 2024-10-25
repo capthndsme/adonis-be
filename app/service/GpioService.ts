@@ -1,4 +1,5 @@
 import rpio from 'rpio'
+import LogService from './LogService.js';
 class GpioService {
   #manualMode = false;
 
@@ -70,9 +71,18 @@ class GpioService {
     }
   }
 
-  writeGpio(pin: GPIOObjects, state: 0 | 1) {
+  writeGpio(pin: GPIOObjects, state: 0 | 1, auto?: boolean) {
     rpio.write(GPIOMap[pin], state);
+
     this.#lastStates[pin] = state;
+    if (auto) {
+      LogService.createLog(
+        "AUTOMATION_TRIGGER",
+        null,
+        `Automation ${pin} set to ${state ? 'OFF' : 'ON'}`,
+        null
+      )
+    }
   }
 
   readGpio(pin: GPIOObjects) {

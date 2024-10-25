@@ -62,6 +62,7 @@
     "better-sqlite3": "^11.3.0",
     "i2c-bus": "^5.2.3",
     "luxon": "^3.5.0",
+    "pigpio-client": "^1.5.2",
     "raspberrypi-liquid-crystal": "^1.20.0",
     "reflect-metadata": "^0.2.2",
     "rpio": "^2.4.2",

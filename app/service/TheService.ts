@@ -4,6 +4,7 @@ import GpioService, { GPIOMap, GPIOObjects } from "./GpioService.js";
 import LCDService from "./LCDService.js";
 import SensorService, { Sensors } from "./SensorService.js";
 import SettingsService from "./SettingsService.js";
+import LogService from "./LogService.js";
 
 
 class TheService {
@@ -11,6 +12,7 @@ class TheService {
   booted = false;
   private lastAboveHigh = false;  // for tank control
   private lastAboveHighA = false; // for soil moisture A
+  private isInManualMode = false;
   private lastAboveHighB = false; // for soil moisture B // Track if we were previously above HighThresh
   private readonly LOW_THRESH = 20;
   private readonly HIGH_THRESH = 80;
@@ -74,10 +76,10 @@ class TheService {
 
 
 
-    async dataCheck() {
+  async dataCheck() {
     if (!this.currentData) return console.log(`No data yet, skipping.`);
     if (GpioService.getManualMode()) return;
-    
+
     const { thresholds } = SettingsService.getSettings();
     const { sensors } = this.currentData;
 
@@ -174,8 +176,44 @@ class TheService {
     setInterval(() => this.checkManualSwitches(), 24); // Poll every 100ms
   }
 
+  private enterManualMode() {
+    // Custom code to be executed when entering manual mode
+    console.log("Entering manual mode, setting GPIOs to OFF (1)");
+
+    // Set all relevant GPIOs to OFF (1)
+    GpioService.writeGpio('outflowA', 1);
+    GpioService.writeGpio('outflowB', 1);
+    GpioService.writeGpio('tapToMain', 1);
+    GpioService.writeGpio('rainwaterToMain', 1);
+
+    // Additional initialization code for manual mode can go here
+    this.lastAboveHigh = false;
+    this.lastAboveHighA = false;
+    this.lastAboveHighB = false;
+
+    LogService.createLog(
+      "AUTOMATION_TRIGGER",
+      null,
+      "Manual mode entered",
+      null
+    )
+ 
+    
+  }
+
   private checkManualSwitches() {
-    if (!GpioService.getManualMode()) return;
+    const manualMode = GpioService.getManualMode();
+
+    // Check if we are entering manual mode
+    if (manualMode && !this.isInManualMode) {
+      this.isInManualMode = true;
+      this.enterManualMode();
+    } else if (!manualMode && this.isInManualMode) {
+      // Exiting manual mode
+      this.isInManualMode = false;
+    }
+
+    if (!manualMode) return;
 
     const manualSwitches: Array<{ pin: GPIOObjects, relay: GPIOObjects }> = [
       { pin: 'outflowAManual', relay: 'outflowA' },

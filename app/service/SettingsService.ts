@@ -49,7 +49,7 @@ class Settings {
         thresholds: {
           soilMoisture: {
             low: 30,
-            high: 100
+            high: 80
           },
           tankLevel: {
             low: 20,

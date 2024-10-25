@@ -1,0 +1,7 @@
+export type AuditType = 
+  "AUTOMATION_TRIGGER" | 
+  "SETTINGS_CHANGE" | 
+  "LOGIN" | 
+  "LOGOUT" |
+  "TIME_AUTOMATION_TRIGGER" |
+  "MANUAL_MODE"
