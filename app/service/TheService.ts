@@ -191,6 +191,10 @@ class TheService {
     this.lastAboveHighA = false;
     this.lastAboveHighB = false;
 
+    Object.keys(this.manualStates).forEach(key => {
+      this.manualStates[key] = false;
+    })
+
     LogService.createLog(
       "AUTOMATION_TRIGGER",
       null,

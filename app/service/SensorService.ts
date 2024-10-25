@@ -89,7 +89,7 @@ class SerialPortReader {
     const numbers = line.split(/\s+/).map(Number);
 
     if (numbers.length === 4 && numbers.every(n => !isNaN(n))) {
-      const [hydroA, hydroB, ultraA, ultraB] = numbers;
+      const [hydroA, hydroB, ultraB, ultraA] = numbers;
 
       const newValues = {
         A: normalize(hydroA, 0, 100),
