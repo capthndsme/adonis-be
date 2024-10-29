@@ -52,7 +52,7 @@ class LCDService {
 
       this.#lcd.setCursorSync(0, 1)
       this.#lcd.printSync(
-        `T1: ${this.convertPercToLitre(ultrasonic.secondTank ?? 0).toFixed(0)}L T2: ${this.convertPercToLitre(ultrasonic.mainTank ?? 0).toFixed(0)}L     `
+        `T1: ${this.convertPercToLitre(ultrasonic.mainTank ?? 0).toFixed(0)}L T2: ${this.convertPercToLitre(ultrasonic.secondTank ?? 0).toFixed(0)}L     `
       )
     }
   }
