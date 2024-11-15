@@ -47,11 +47,11 @@ class LCDService {
       this.#lcd.printSync(`${tapIndicator} ${rainwaterIndicator}                  `)
     } else {
       this.#lcd.setCursorSync(0, 0)
-      this.#lcd.printSync(`AT R1:${soilMoisture.A?.toFixed(0)} R2:${soilMoisture.B?.toFixed(0)}   `)
+      this.#lcd.printSync(`AT R1:${soilMoisture.A?.toFixed(0)} R2:${soilMoisture.B?.toFixed(0)}    `)
 
       this.#lcd.setCursorSync(0, 1)
       this.#lcd.printSync(
-        `T1: ${this.convertPercToLitre(ultrasonic.mainTank ?? 0).toFixed(0)}L T2: ${this.convertPercToLitre(ultrasonic.secondTank ?? 0).toFixed(0)}L     `
+        `T1: ${this.convertPercToLitre(ultrasonic.mainTank ?? 0).toFixed(0)}L T2: ${this.convertPercToLitre(ultrasonic.secondTank ?? 0).toFixed(0)}L      `
       )
     }
   }
