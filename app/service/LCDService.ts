@@ -39,8 +39,8 @@ class LCDService {
     if (ManualMode) {
       const outflowAIndicator = data.LastStates?.outflowA === 0 ? 'R1 ON' : 'R1 OFF';
       const outflowBIndicator = data.LastStates?.outflowB === 0 ? 'R2 ON' : 'R2 OFF';
-      const tapIndicator = data.LastStates?.tapToMain === 0 ? 'T1 ON' : 'T1 OFF';
-      const rainwaterIndicator = data.LastStates?.rainwaterToMain === 0 ? 'T2 ON' : 'T2 OFF';
+      const tapIndicator = data.LastStates?.rainwaterToMain === 0 ? 'T1 ON' : 'T1 OFF';
+      const rainwaterIndicator = data.LastStates?.tapToMain === 0 ? 'T2 ON' : 'T2 OFF';
       this.#lcd.setCursorSync(0, 0)
       this.#lcd.printSync(`MN ${outflowAIndicator} ${outflowBIndicator}              `)
       this.#lcd.setCursorSync(0, 1)
