@@ -23,6 +23,7 @@ export default class Audit extends BaseModel {
 
   @column()
   declare optVal: string | null;
+  
 
 
 }

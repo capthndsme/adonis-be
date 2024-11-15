@@ -13,6 +13,8 @@ import { middleware } from './kernel.js'
 
 const AuthController = () => import('../app/controllers/auth_controller.js')
 const DataController = () => import('../app/controllers/data_controller.js')
+const SettingsController = () => import('../app/controllers/settings_controller.js')
+const AuditsController = () => import('../app/controllers/audits_controller.js')
 
 
 router.get('/', async () => {
@@ -26,7 +28,13 @@ router.get('/', async () => {
  * AUTH ROUTE GROUP.
  */
 router.group(() => {
+  router.get('/audit', [AuditsController, 'getAudits'])
   router.get('/dash/data', [DataController, 'getDashData'])
+  router.get('/settings/get', [SettingsController, 'getSettings'])
+  router.post('/settings/set', [SettingsController, 'setSettings'])
+  router.get('/settings/presets', [SettingsController, 'getPresets'])
+  router.post('/settings/preset/create', [SettingsController, 'createPreset'])
+  router.post('/login', [AuthController, 'login'] )
 })
 .prefix('/api')
 .use([middleware.auth()])

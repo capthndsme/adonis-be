@@ -1,3 +1,4 @@
+import Config from "#models/config";
 import env from "#start/env";
 import { Bcrypt } from "@adonisjs/core/hash/drivers/bcrypt";
 import { existsSync, readFileSync, writeFileSync } from "fs";
@@ -27,6 +28,7 @@ export interface Setting {
   password: string,
   serialPort: string,
   simulator?: boolean;
+  activePreset?: number;
 }
 
 class Settings {
@@ -72,6 +74,53 @@ class Settings {
     }
   }
 
+
+  async getPresets() {
+    return await Config.query().orderBy('id', 'asc');
+  }
+
+  async updatePreset(id: number, preset: Partial<Config>) {
+    const p = await Config.findOrFail(id);
+    p.merge(preset);
+    await p.save();
+    return p;
+  }
+
+  async createPreset(preset: Partial<Config>) {
+    const p = await  Config.create({
+      ...preset
+    })
+    await p.save();
+    return p;
+  }
+
+  async deletePreset(id: number) {
+    const p = await Config.findOrFail(id);
+    await p.delete();
+    return p;
+  }
+  async getPreset(id: number) {
+    return await Config.findOrFail(id);
+  }
+
+  async saveConfig(config: Setting, activePreset: number) {
+    this.#settings = {
+      ...this.#settings,
+      ...config,
+      activePreset,
+      thresholds: {
+        ...this.#settings.thresholds,
+        ...config.thresholds
+      },
+      intervals: {
+        ...this.#settings.intervals,
+        ...config.intervals
+      },
+       
+    };
+    this.saveSetting();
+  }
+  
   getSettings() {
     return this.#settings;
   }

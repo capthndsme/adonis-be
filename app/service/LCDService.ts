@@ -12,8 +12,7 @@ class LCDService {
     this.#lcd = new LCD(1, 0x26, 16, 2);
     if (this.#RPI)
       this.#lcd.beginSync();
-    else
-      console.log("LCD not initialised")
+ 
   }
 
 
