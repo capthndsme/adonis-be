@@ -5,7 +5,8 @@ import LCDService from "./LCDService.js";
 import SensorService, { Sensors } from "./SensorService.js";
 import SettingsService from "./SettingsService.js";
 import LogService from "./LogService.js";
-
+import { sleep } from "../util.js";
+ 
 
 class TheService {
 
@@ -43,7 +44,10 @@ class TheService {
     const settings = SettingsService;
     console.log('SettingsService', settings)
 
+    console.log('Starting UP: SensorService StartListen')
     SensorService.startListening()
+    await sleep(1000);
+    console.log('Starting UP: SensorService RegisterCallback')
     SensorService.registerCallback((data: Sensors) => {
       this.currentData = data;
       LCDService.update({
@@ -52,7 +56,11 @@ class TheService {
         LastStates: GpioService.getLastStates()
       })
     })
+    console.log('Starting UP GPIO')
     GpioService.initialise();
+    console.log('GPIO DONE')
+    await sleep(1000);
+    console.log('Starting UP DataLoop')
     await this.dataLoop();
     this.setupManualSwitchPolling();
   }
@@ -173,11 +181,10 @@ class TheService {
    */
 
   private setupManualSwitchPolling() {
-    setInterval(() => this.checkManualSwitches(), 24); // Poll every 100ms
+    setInterval(() => this.checkManualSwitches(), 50); // Poll every 100ms
   }
 
   private enterManualMode() {
-    // Custom code to be executed when entering manual mode
     console.log("Entering manual mode, setting GPIOs to OFF (1)");
 
     // Set all relevant GPIOs to OFF (1)
@@ -186,23 +193,30 @@ class TheService {
     GpioService.writeGpio('tapToMain', 1);
     GpioService.writeGpio('rainwaterToMain', 1);
 
-    // Additional initialization code for manual mode can go here
+    // Initialize manual states
+    Object.keys(this.manualStates).forEach(key => {
+      this.manualStates[key] = false;
+    });
+
+    // Read and update initial switch states
+    this.previousSwitchStates = {
+      outflowAManual: GpioService.readGpio('outflowAManual'),
+      outflowBManual: GpioService.readGpio('outflowBManual'),
+      tapManual: GpioService.readGpio('tapManual'),
+      rainwaterManual: GpioService.readGpio('rainwaterManual')
+    };
+
+    // ... other initialization code ...
     this.lastAboveHigh = false;
     this.lastAboveHighA = false;
     this.lastAboveHighB = false;
-
-    Object.keys(this.manualStates).forEach(key => {
-      this.manualStates[key] = false;
-    })
 
     LogService.createLog(
       "AUTOMATION_TRIGGER",
       null,
       "Manual mode entered",
       null
-    )
- 
-    
+    );
   }
 
   private checkManualSwitches() {

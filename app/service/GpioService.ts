@@ -1,5 +1,6 @@
 import pigpio from 'pigpio';
 import LogService from './LogService.js';
+import { sleep } from '../util.js';
 
 const { Gpio } = pigpio;
 
@@ -29,18 +30,42 @@ class GpioService {
     console.log(`ManualMode: init`);
 
     console.log("Delay starter");
-    setTimeout(() => {
+    setTimeout(async () => {
       // Initialize GPIO pins
+      console.log("Manual Mode pin init")
       this.initPin(GPIOMap.manualMode, Gpio.INPUT, { pullUpDown: Gpio.PUD_UP });
+      await sleep(200)
+      console.log("Outflow pin A init")
       this.initPin(GPIOMap.outflowA, Gpio.OUTPUT);
+      await sleep(200)
+      console.log("Outflow pin B init")
       this.initPin(GPIOMap.outflowB, Gpio.OUTPUT);
+
+      await sleep(200)
+      console.log("RainwaterToMain pin init")
+      
       this.initPin(GPIOMap.rainwaterToMain, Gpio.OUTPUT);
+
+      await sleep(200)
+      console.log("Taptomain pin init")
       this.initPin(GPIOMap.tapToMain, Gpio.OUTPUT);
 
+
       // manual
+      await sleep(200)
+      console.log("Manual Outflow A pin init")
       this.initPin(GPIOMap.outflowAManual, Gpio.INPUT, { pullUpDown: Gpio.PUD_UP });
+
+      await sleep(200)
+      console.log("Manual Outflow B pin init")
       this.initPin(GPIOMap.outflowBManual, Gpio.INPUT, { pullUpDown: Gpio.PUD_UP });
+
+      await sleep(200)
+      console.log("Manual Tap pin init")
       this.initPin(GPIOMap.tapManual, Gpio.INPUT, { pullUpDown: Gpio.PUD_UP });
+
+      await sleep(200)
+      console.log("Manual Rainwater pin init")
       this.initPin(GPIOMap.rainwaterManual, Gpio.INPUT, { pullUpDown: Gpio.PUD_UP });
 
       this.loop();
