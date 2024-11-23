@@ -37,7 +37,9 @@ let simulationInterval: NodeJS.Timeout | null = null; // Store interval for clea
 class SerialPortReader { 
    private buffer: string = '';
   constructor() {
+    console.log("SerialPortReader.ts create")
     if (!SIMULATE_USB) {
+      console.log("Try open port")
       try {
         port = new SerialPort({
           baudRate: 9600,
@@ -120,6 +122,7 @@ class SerialPortReader {
   }
 
   startListening() {
+    
     if (SIMULATE_USB) {
       console.log("[SerialPortReader.ts] Simulating USB port data.");
       simulationInterval = setInterval(() => {
