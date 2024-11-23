@@ -30,10 +30,15 @@ class SerialPortReader {
   private readonly DELIMITER = ',';
   
   // Normalization ranges
-  private readonly HYDRO_MIN = 150;
-  private readonly HYDRO_MAX = 1023;
-  private readonly ULTRA_MIN = 0;
-  private readonly ULTRA_MAX = 450;
+  // 0
+  private readonly HYDRO_MIN = 0x00;
+
+  //100
+  private readonly HYDRO_MAX = 0x64;
+  // 0
+  private readonly ULTRA_MIN = 0x00;
+  // 450
+  private readonly ULTRA_MAX = 0x1c2;
   
   constructor() {
     console.log("[SerialPortReader] Initializing...");
