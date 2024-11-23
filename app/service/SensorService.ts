@@ -1,6 +1,6 @@
 import { SerialPort } from "serialport";
 import SettingsService from "./SettingsService.js";
-import { normalize } from "../util.js";
+import { normalize, sleep } from "../util.js";
 
 export type Sensors = {
   sensors: {
@@ -23,36 +23,71 @@ class SerialPortReader {
   private buffer: string = '';
   private isConnected: boolean = false;
   private reconnectTimer: NodeJS.Timeout | null = null;
+  private isInitialized: boolean = false;
   
-  // Message parsing constants
   private readonly START_MARKER = '<';
   private readonly END_MARKER = '>';
   private readonly DELIMITER = ',';
   
+  // Normalization ranges
+  private readonly HYDRO_MIN = 150;
+  private readonly HYDRO_MAX = 1023;
+  private readonly ULTRA_MIN = 0;
+  private readonly ULTRA_MAX = 450;
+  
   constructor() {
-    if (!SettingsService.getSettings().simulator) {
-      // Initial connection delay to allow Arduino to reset
-      setTimeout(() => this.initializePort(), 5000);
+    console.log("[SerialPortReader] Initializing...");
+    this.initialize();
+  }
+
+  private async initialize() {
+    if (this.isInitialized) return;
+    
+    try {
+      // Wait for settings service to be ready
+      while (!SettingsService.getSettings()) {
+        console.log("[SerialPortReader] Waiting for settings...");
+        await sleep(1000);
+      }
+      
+      this.isInitialized = true;
+      
+      if (!SettingsService.getSettings().simulator) {
+        console.log("[SerialPortReader] Waiting 5s before connecting to port...");
+        await sleep(5000);
+        await this.initializePort();
+      }
+    } catch (error) {
+      console.error("[SerialPortReader] Initialization error:", error);
+      this.scheduleReconnect();
     }
   }
 
-  private initializePort() {
+  private async initializePort() {
     try {
+      if (this.port) {
+        console.log("[SerialPortReader] Cleaning up existing port...");
+        this.cleanup();
+      }
+
       this.port = new SerialPort({
         path: SettingsService.getSettings().serialPort,
         baudRate: 9600,
         dataBits: 8,
         stopBits: 1,
         parity: "none",
-        // Add hardware flow control
         rtscts: true,
       });
 
-      this.port.on('open', () => {
-        console.log("[SerialPortReader] Port opened successfully");
-        this.isConnected = true;
-        // Flush any pending data
-        this.port?.flush();
+      // Wait for port to open
+      await new Promise<void>((resolve, reject) => {
+        this.port?.once('open', () => {
+          console.log("[SerialPortReader] Port opened successfully");
+          this.isConnected = true;
+          this.port?.flush();
+          resolve();
+        });
+        this.port?.once('error', reject);
       });
 
       this.port.on('error', this.handleError.bind(this));
@@ -73,7 +108,7 @@ class SerialPortReader {
       this.processBuffer();
     } catch (error) {
       console.error("[SerialPortReader] Data processing error:", error);
-      this.buffer = ''; // Clear buffer on error
+      this.buffer = '';
     }
   }
 
@@ -83,7 +118,6 @@ class SerialPortReader {
       const endIdx = this.buffer.indexOf(this.END_MARKER);
       
       if (startIdx === -1 || endIdx === -1 || startIdx > endIdx) {
-        // Incomplete or invalid message, keep only the last potential partial message
         const lastStart = this.buffer.lastIndexOf(this.START_MARKER);
         this.buffer = lastStart !== -1 ? this.buffer.slice(lastStart) : '';
         break;
@@ -113,21 +147,28 @@ class SerialPortReader {
       }
       
       const [hydroA, hydroB, ultraA, ultraB] = values;
-      
-      const sensorData: Sensors = {
+
+      // Normalize values
+      const normalizedData: Sensors = {
         sensors: {
           soilMoisture: {
-            A: hydroA,
-            B: hydroB,
+            A: normalize(hydroA, this.HYDRO_MIN, this.HYDRO_MAX),
+            B: normalize(hydroB, this.HYDRO_MIN, this.HYDRO_MAX),
           },
           ultrasonic: {
-            mainTank: ultraA,
-            secondTank: ultraB,
+            mainTank: normalize(ultraA, this.ULTRA_MIN, this.ULTRA_MAX),
+            secondTank: normalize(ultraB, this.ULTRA_MIN, this.ULTRA_MAX),
           },
         },
       };
+
+      // Validate normalized data
+      if (Object.values(normalizedData.sensors.soilMoisture).some(isNaN) ||
+          Object.values(normalizedData.sensors.ultrasonic).some(isNaN)) {
+        throw new Error("Normalization produced invalid values");
+      }
       
-      this.notifyCallbacks(sensorData);
+      this.notifyCallbacks(normalizedData);
       
     } catch (error) {
       console.error("[SerialPortReader] Message processing error:", error);
@@ -174,15 +215,23 @@ class SerialPortReader {
 
   private scheduleReconnect() {
     if (!this.reconnectTimer) {
-      this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = setTimeout(async () => {
         this.reconnectTimer = null;
-        this.initializePort();
+        await this.initializePort();
       }, 5000);
     }
   }
 
-  // Public methods
+  async startListening() {
+    console.log("[SerialPortReader] Start listening called");
+    if (!this.isInitialized) {
+      console.log("[SerialPortReader] Waiting for initialization...");
+      await this.initialize();
+    }
+  }
+
   registerCallback(callback: SerialCallbackFn) {
+    console.log("[SerialPortReader] Registering new callback");
     this.callbacks.add(callback);
   }
 
@@ -191,6 +240,7 @@ class SerialPortReader {
   }
 
   disconnect() {
+    console.log("[SerialPortReader] Disconnecting...");
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
