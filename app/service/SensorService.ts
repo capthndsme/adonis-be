@@ -1,257 +1,184 @@
-import { SerialPort } from "serialport";
+
 import SettingsService from "./SettingsService.js";
 import { normalize, sleep } from "../util.js";
 
 export type Sensors = {
-  sensors: {
-    soilMoisture: {
-      A: number;
-      B: number;
+    sensors: {
+        soilMoisture: {
+            A: number;
+            B: number;
+        };
+        ultrasonic: {
+            mainTank: number;
+            secondTank: number;
+        };
     };
-    ultrasonic: {
-      mainTank: number;
-      secondTank: number;
-    };
-  };
 };
 
 export type SerialCallbackFn = (data: Sensors) => void;
 
-class SerialPortReader {
-  private port: SerialPort | null = null;
-  private callbacks: Set<SerialCallbackFn> = new Set();
-  private buffer: string = '';
-  private isConnected: boolean = false;
-  private reconnectTimer: NodeJS.Timeout | null = null;
-  private isInitialized: boolean = false;
-  
-  private readonly START_MARKER = '<';
-  private readonly END_MARKER = '>';
-  private readonly DELIMITER = ',';
-  
-  // Normalization ranges
-  // 0
-  private readonly HYDRO_MIN = 0x00;
+class SensorService {
 
-  //100
-  private readonly HYDRO_MAX = 0x64;
-  // 0
-  private readonly ULTRA_MIN = 0x00;
-  // 450
-  private readonly ULTRA_MAX = 0x1c2;
-  
-  constructor() {
-    console.log("[SerialPortReader] Initializing...");
-    this.initialize();
-  }
+    private callbacks: Set<SerialCallbackFn> = new Set();
 
-  private async initialize() {
-    if (this.isInitialized) return;
+    private isInitialized: boolean = false;
+    private sensorData: Sensors | null = null;
+
     
-    try {
-      // Wait for settings service to be ready
-      while (!SettingsService.getSettings()) {
-        console.log("[SerialPortReader] Waiting for settings...");
-        await sleep(1000);
-      }
-      
-      this.isInitialized = true;
-      
-      if (!SettingsService.getSettings().simulator) {
-        console.log("[SerialPortReader] Waiting 5s before connecting to port...");
-        await sleep(5000);
-        await this.initializePort();
-      }
-    } catch (error) {
-      console.error("[SerialPortReader] Initialization error:", error);
-      this.scheduleReconnect();
+ 
+    // Normalization ranges
+    // 0
+    private readonly HYDRO_MIN = 0;
+
+    //100
+    private readonly HYDRO_MAX = 100;
+    // 0
+    private readonly ULTRA_MIN = 0;
+    // 450
+    private readonly ULTRA_MAX = 450;
+
+    constructor() {
+        console.log("[SerialPortReader] Initializing...");
+        this.initialize();
     }
-  }
 
-  private async initializePort() {
-    try {
-      if (this.port) {
-        console.log("[SerialPortReader] Cleaning up existing port...");
-        this.cleanup();
-      }
+    private async initialize() {
+        if (this.isInitialized) return;
 
-      this.port = new SerialPort({
-        path: SettingsService.getSettings().serialPort,
-        baudRate: 9600,
-        dataBits: 8,
-        stopBits: 1,
-        parity: "none",
-        rtscts: true,
-      });
+        try {
+            // Wait for settings service to be ready
+            while (!SettingsService.getSettings()) {
+                console.log("[SerialPortReader] Waiting for settings...");
+                await sleep(1000);
+            }
 
-      // Wait for port to open
-      await new Promise<void>((resolve, reject) => {
-        this.port?.once('open', () => {
-          console.log("[SerialPortReader] Port opened successfully");
-          this.isConnected = true;
-          this.port?.flush();
-          resolve();
+            this.isInitialized = true;
+
+            if (!SettingsService.getSettings().simulator) {
+                console.log("[SerialPortReader] Running in normal mode.");
+                this.startPolling();
+            } else {
+                console.log("[SerialPortReader] Running in simulator mode.");
+                this.startSimulator();
+            }
+        } catch (error) {
+            console.error("[SerialPortReader] Initialization error:", error);
+     
+        }
+    }
+
+    // Start data polling from the server
+    private startPolling() {
+        console.log("[SerialPortReader] Starting data polling...");
+        this.fetchSensorData(); // Initial fetch
+         setInterval(() => {
+            this.fetchSensorData();
+        }, 4000); // Poll every 4 seconds
+    }
+
+    // Fetch sensor data from the local server
+    private async fetchSensorData() {
+        try {
+            const response = await fetch('http://localhost:1444/sensors');
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json() as Sensors;
+
+            // Validate normalized data
+            if (Object.values(data.sensors.soilMoisture).some(isNaN) ||
+                Object.values(data.sensors.ultrasonic).some(isNaN)) {
+                throw new Error("Data from server contains invalid values");
+            }
+            this.sensorData = data;
+            this.notifyCallbacks(data);
+        } catch (error) {
+            console.error("[SerialPortReader] Error fetching sensor data:", error);
+            this.sensorData = null; // Or some error state
+
+        }
+    }
+
+    // Starts the simulator with random values
+    private startSimulator() {
+        console.log("[SerialPortReader] Starting simulator...");
+        setInterval(() => {
+            const simulatedData: Sensors = {
+                sensors: {
+                    soilMoisture: {
+                        A: this.getRandomInt(this.HYDRO_MIN, this.HYDRO_MAX),
+                        B: this.getRandomInt(this.HYDRO_MIN, this.HYDRO_MAX),
+                    },
+                    ultrasonic: {
+                        mainTank: this.getRandomInt(this.ULTRA_MIN, this.ULTRA_MAX),
+                        secondTank: this.getRandomInt(this.ULTRA_MIN, this.ULTRA_MAX),
+                    },
+                },
+            };
+            this.sensorData = simulatedData;
+            this.notifyCallbacks(simulatedData);
+        }, 4000);
+    }
+
+    // Generate random integer between min and max (inclusive)
+    private getRandomInt(min: number, max: number): number {
+        min = Math.ceil(min);
+        max = Math.floor(max);
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    private notifyCallbacks(data: Sensors) {
+        this.callbacks.forEach(callback => {
+            try {
+                callback({
+                    sensors: {
+                        soilMoisture: {
+                            A: normalize(data.sensors.soilMoisture.A, this.HYDRO_MIN, this.HYDRO_MAX),
+                            B: normalize(data.sensors.soilMoisture.B, this.HYDRO_MIN, this.HYDRO_MAX),
+                        },
+                        ultrasonic: {
+                            mainTank: normalize(data.sensors.ultrasonic.mainTank, this.ULTRA_MIN, this.ULTRA_MAX),
+                            secondTank: normalize(data.sensors.ultrasonic.secondTank, this.ULTRA_MIN, this.ULTRA_MAX),
+                        },
+                    }
+                });
+            } catch (error) {
+                console.error("[SerialPortReader] Callback error:", error);
+            }
         });
-        this.port?.once('error', reject);
-      });
-
-      this.port.on('error', this.handleError.bind(this));
-      this.port.on('close', this.handleDisconnect.bind(this));
-      this.port.on('data', this.handleData.bind(this));
-
-    } catch (error) {
-      console.error("[SerialPortReader] Failed to open port:", error);
-      this.scheduleReconnect();
     }
-  }
 
-  private handleData(data: Buffer) {
-    try {
-      const text = new TextDecoder().decode(data);
-      this.buffer += text;
-      
-      this.processBuffer();
-    } catch (error) {
-      console.error("[SerialPortReader] Data processing error:", error);
-      this.buffer = '';
+
+
+    async startListening() {
+        console.log("[SerialPortReader] Start listening called");
+        if (!this.isInitialized) {
+            console.log("[SerialPortReader] Waiting for initialization...");
+            await this.initialize();
+        }
     }
-  }
 
-  private processBuffer() {
-    while (true) {
-      const startIdx = this.buffer.indexOf(this.START_MARKER);
-      const endIdx = this.buffer.indexOf(this.END_MARKER);
-      
-      if (startIdx === -1 || endIdx === -1 || startIdx > endIdx) {
-        const lastStart = this.buffer.lastIndexOf(this.START_MARKER);
-        this.buffer = lastStart !== -1 ? this.buffer.slice(lastStart) : '';
-        break;
-      }
-      
-      const message = this.buffer.slice(startIdx + 1, endIdx);
-      this.buffer = this.buffer.slice(endIdx + 1);
-      
-      this.processMessage(message);
+    registerCallback(callback: SerialCallbackFn) {
+        console.log("[SerialPortReader] Registering new callback");
+        this.callbacks.add(callback);
+        // If we have latest data, immediately notify the new callback
+        if (this.sensorData) {
+            try {
+                callback(this.sensorData);
+            } catch (error) {
+                console.error("[SerialPortReader] Immediate callback error:", error);
+            }
+        }
     }
-  }
 
-  private processMessage(message: string) {
-    try {
-      const [data, checksumStr] = message.split('|');
-      const values = data.split(this.DELIMITER).map(Number);
-      const checksum = parseInt(checksumStr, 10);
-      
-      if (values.length !== 4 || isNaN(checksum)) {
-        throw new Error("Invalid message format");
-      }
-      
-      // Verify checksum
-      const calculatedChecksum = (values.reduce((a, b) => a + b, 0)) & 0xFF;
-      if (calculatedChecksum !== checksum) {
-        throw new Error("Checksum mismatch");
-      }
-      
-      const [hydroA, hydroB, ultraA, ultraB] = values;
-
-      // Normalize values
-      const normalizedData: Sensors = {
-        sensors: {
-          soilMoisture: {
-            A: normalize(hydroA, this.HYDRO_MIN, this.HYDRO_MAX),
-            B: normalize(hydroB, this.HYDRO_MIN, this.HYDRO_MAX),
-          },
-          ultrasonic: {
-            mainTank: normalize(ultraA, this.ULTRA_MIN, this.ULTRA_MAX),
-            secondTank: normalize(ultraB, this.ULTRA_MIN, this.ULTRA_MAX),
-          },
-        },
-      };
-
-      // Validate normalized data
-      if (Object.values(normalizedData.sensors.soilMoisture).some(isNaN) ||
-          Object.values(normalizedData.sensors.ultrasonic).some(isNaN)) {
-        throw new Error("Normalization produced invalid values");
-      }
-      
-      this.notifyCallbacks(normalizedData);
-      
-    } catch (error) {
-      console.error("[SerialPortReader] Message processing error:", error);
+    removeCallback(callback: SerialCallbackFn) {
+        this.callbacks.delete(callback);
     }
-  }
 
-  private notifyCallbacks(data: Sensors) {
-    this.callbacks.forEach(callback => {
-      try {
-        callback(data);
-      } catch (error) {
-        console.error("[SerialPortReader] Callback error:", error);
-      }
-    });
-  }
 
-  private handleError(error: Error) {
-    console.error("[SerialPortReader] Port error:", error);
-    this.handleDisconnect();
-  }
-
-  private handleDisconnect() {
-    if (this.isConnected) {
-      console.log("[SerialPortReader] Port disconnected");
-      this.cleanup();
-      this.scheduleReconnect();
+    getSensorData() {
+        return this.sensorData;
     }
-  }
-
-  private cleanup() {
-    this.isConnected = false;
-    this.buffer = '';
-    
-    if (this.port) {
-      this.port.removeAllListeners();
-      try {
-        this.port.close();
-      } catch (error) {
-        console.error("[SerialPortReader] Error closing port:", error);
-      }
-      this.port = null;
-    }
-  }
-
-  private scheduleReconnect() {
-    if (!this.reconnectTimer) {
-      this.reconnectTimer = setTimeout(async () => {
-        this.reconnectTimer = null;
-        await this.initializePort();
-      }, 5000);
-    }
-  }
-
-  async startListening() {
-    console.log("[SerialPortReader] Start listening called");
-    if (!this.isInitialized) {
-      console.log("[SerialPortReader] Waiting for initialization...");
-      await this.initialize();
-    }
-  }
-
-  registerCallback(callback: SerialCallbackFn) {
-    console.log("[SerialPortReader] Registering new callback");
-    this.callbacks.add(callback);
-  }
-
-  removeCallback(callback: SerialCallbackFn) {
-    this.callbacks.delete(callback);
-  }
-
-  disconnect() {
-    console.log("[SerialPortReader] Disconnecting...");
-    if (this.reconnectTimer) {
-      clearTimeout(this.reconnectTimer);
-      this.reconnectTimer = null;
-    }
-    this.cleanup();
-  }
 }
 
-export default new SerialPortReader();
+export default new SensorService();
