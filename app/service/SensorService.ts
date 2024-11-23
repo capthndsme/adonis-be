@@ -1,3 +1,7 @@
+import { SerialPort } from "serialport";
+import SettingsService from "./SettingsService.js";
+import { normalize } from "../util.js";
+
 export type Sensors = {
   sensors: {
     soilMoisture: {
@@ -5,154 +9,193 @@ export type Sensors = {
       B: number;
     };
     ultrasonic: {
-      /** RAIN WATER (UT1)*/
       mainTank: number;
-    
-      /** MAIN WATER (UT2) */
       secondTank: number;
     };
   };
-}
-export type SerialCallbackFn = ((data: Sensors) => void)
+};
 
+export type SerialCallbackFn = (data: Sensors) => void;
 
-
-// Import the SerialPort class from the serialport module
-import { SerialPort } from "serialport"
-import SettingsService from "./SettingsService.js";
-import { normalize } from "../util.js";
- 
-
-
-// Flag to simulate USB port
-const SIMULATE_USB = SettingsService.getSettings().simulator;
-
-// Define a LineBreakTransformer class to split the data into lines
- 
-
-let port: SerialPort | null = null;
-let callbacks: SerialCallbackFn[] = [];
-let simulationInterval: NodeJS.Timeout | null = null; // Store interval for clearing
-
-class SerialPortReader { 
-   private buffer: string = '';
+class SerialPortReader {
+  private port: SerialPort | null = null;
+  private callbacks: Set<SerialCallbackFn> = new Set();
+  private buffer: string = '';
+  private isConnected: boolean = false;
+  private reconnectTimer: NodeJS.Timeout | null = null;
+  
+  // Message parsing constants
+  private readonly START_MARKER = '<';
+  private readonly END_MARKER = '>';
+  private readonly DELIMITER = ',';
+  
   constructor() {
-    console.log("SerialPortReader.ts create")
-    if (!SIMULATE_USB) {
-      console.log("Try open port")
-      try {
-        port = new SerialPort({
-          baudRate: 9600,
-          dataBits: 8,
-          stopBits: 1,
-          path: SettingsService.getSettings().serialPort,
-          parity: "none",
-        });
-        console.log("[SerialPortReader.ts] Opened Serial Port.");
-      } catch (error) {
-        console.error("[SerialPortReader.ts] Error opening Serial Port:", error);
-        // Handle the error appropriately, e.g., throw an error or provide fallback behavior
-      }
+    if (!SettingsService.getSettings().simulator) {
+      // Initial connection delay to allow Arduino to reset
+      setTimeout(() => this.initializePort(), 5000);
     }
   }
 
+  private initializePort() {
+    try {
+      this.port = new SerialPort({
+        path: SettingsService.getSettings().serialPort,
+        baudRate: 9600,
+        dataBits: 8,
+        stopBits: 1,
+        parity: "none",
+        // Add hardware flow control
+        rtscts: true,
+      });
+
+      this.port.on('open', () => {
+        console.log("[SerialPortReader] Port opened successfully");
+        this.isConnected = true;
+        // Flush any pending data
+        this.port?.flush();
+      });
+
+      this.port.on('error', this.handleError.bind(this));
+      this.port.on('close', this.handleDisconnect.bind(this));
+      this.port.on('data', this.handleData.bind(this));
+
+    } catch (error) {
+      console.error("[SerialPortReader] Failed to open port:", error);
+      this.scheduleReconnect();
+    }
+  }
+
+  private handleData(data: Buffer) {
+    try {
+      const text = new TextDecoder().decode(data);
+      this.buffer += text;
+      
+      this.processBuffer();
+    } catch (error) {
+      console.error("[SerialPortReader] Data processing error:", error);
+      this.buffer = ''; // Clear buffer on error
+    }
+  }
+
+  private processBuffer() {
+    while (true) {
+      const startIdx = this.buffer.indexOf(this.START_MARKER);
+      const endIdx = this.buffer.indexOf(this.END_MARKER);
+      
+      if (startIdx === -1 || endIdx === -1 || startIdx > endIdx) {
+        // Incomplete or invalid message, keep only the last potential partial message
+        const lastStart = this.buffer.lastIndexOf(this.START_MARKER);
+        this.buffer = lastStart !== -1 ? this.buffer.slice(lastStart) : '';
+        break;
+      }
+      
+      const message = this.buffer.slice(startIdx + 1, endIdx);
+      this.buffer = this.buffer.slice(endIdx + 1);
+      
+      this.processMessage(message);
+    }
+  }
+
+  private processMessage(message: string) {
+    try {
+      const [data, checksumStr] = message.split('|');
+      const values = data.split(this.DELIMITER).map(Number);
+      const checksum = parseInt(checksumStr, 10);
+      
+      if (values.length !== 4 || isNaN(checksum)) {
+        throw new Error("Invalid message format");
+      }
+      
+      // Verify checksum
+      const calculatedChecksum = (values.reduce((a, b) => a + b, 0)) & 0xFF;
+      if (calculatedChecksum !== checksum) {
+        throw new Error("Checksum mismatch");
+      }
+      
+      const [hydroA, hydroB, ultraA, ultraB] = values;
+      
+      const sensorData: Sensors = {
+        sensors: {
+          soilMoisture: {
+            A: hydroA,
+            B: hydroB,
+          },
+          ultrasonic: {
+            mainTank: ultraA,
+            secondTank: ultraB,
+          },
+        },
+      };
+      
+      this.notifyCallbacks(sensorData);
+      
+    } catch (error) {
+      console.error("[SerialPortReader] Message processing error:", error);
+    }
+  }
+
+  private notifyCallbacks(data: Sensors) {
+    this.callbacks.forEach(callback => {
+      try {
+        callback(data);
+      } catch (error) {
+        console.error("[SerialPortReader] Callback error:", error);
+      }
+    });
+  }
+
+  private handleError(error: Error) {
+    console.error("[SerialPortReader] Port error:", error);
+    this.handleDisconnect();
+  }
+
+  private handleDisconnect() {
+    if (this.isConnected) {
+      console.log("[SerialPortReader] Port disconnected");
+      this.cleanup();
+      this.scheduleReconnect();
+    }
+  }
+
+  private cleanup() {
+    this.isConnected = false;
+    this.buffer = '';
+    
+    if (this.port) {
+      this.port.removeAllListeners();
+      try {
+        this.port.close();
+      } catch (error) {
+        console.error("[SerialPortReader] Error closing port:", error);
+      }
+      this.port = null;
+    }
+  }
+
+  private scheduleReconnect() {
+    if (!this.reconnectTimer) {
+      this.reconnectTimer = setTimeout(() => {
+        this.reconnectTimer = null;
+        this.initializePort();
+      }, 5000);
+    }
+  }
+
+  // Public methods
   registerCallback(callback: SerialCallbackFn) {
-    callbacks.push(callback);
+    this.callbacks.add(callback);
   }
 
   removeCallback(callback: SerialCallbackFn) {
-    callbacks = callbacks.filter(cb => cb !== callback)
-  }
-  lastKnownValues = {
-    A: 0,
-    B: 0,
-    mainTank: 0,
-    secondTank: 0,
-  };
-
- _INTERNAL_LISTENER(data: Buffer) {
-    const textDecoder = new TextDecoder();
-    const text = textDecoder.decode(data);
-    
-    // Append new data to the buffer
-    this.buffer += text;
-
-    // Process complete lines
-    const lines = this.buffer.split('\n');
-    // Keep the last potentially incomplete line in the buffer
-    this.buffer = lines.pop() ?? '';
-
-    lines.forEach(line => this.processLine(line.trim()));
+    this.callbacks.delete(callback);
   }
 
-  private processLine(line: string) {
-    if (line === '') return;
-
-    const numbers = line.split(/\s+/).map(Number);
-
-    if (numbers.length === 4 && numbers.every(n => !isNaN(n))) {
-      const [hydroA, hydroB, ultraB, ultraA] = numbers;
-
-      const newValues = {
-        A: normalize(hydroA, 0, 100),
-        B: normalize(hydroB, 0, 100),
-        mainTank: normalize(ultraA, 0, 450),
-        secondTank: normalize(ultraB, 0, 450)
-      };
-
-      this.lastKnownValues = { ...newValues };
-
-      for (const callback of callbacks) {
-        callback({
-          sensors: {
-            soilMoisture: {
-              A: this.lastKnownValues.A,
-              B: this.lastKnownValues.B,
-            },
-            ultrasonic: {
-              mainTank: this.lastKnownValues.mainTank,
-              secondTank: this.lastKnownValues.secondTank,
-            },
-          }
-        });
-      }
-    } else {
-      console.warn(`[SerialPortReader.ts] Received invalid data: ${line}`);
+  disconnect() {
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
     }
-  }
-
-  startListening() {
-    
-    if (SIMULATE_USB) {
-      console.log("[SerialPortReader.ts] Simulating USB port data.");
-      simulationInterval = setInterval(() => {
-        // Simulate data from the USB port
-        // Ultrasonic range: 0-1023
-        const ultraRandom1 = Math.floor(Math.random() * 1024); // 0-1023 inclusive
-        const ultraRandom2 = Math.floor(Math.random() * 1024); // 0-1023 inclusive
-
-        // Hydrometer: 200-1023
-        const hydroRandom1 = Math.floor(Math.random() * 874) + 150; // 200-1023 inclusive
-        const hydroRandom2 = Math.floor(Math.random() * 874) + 150; // 200-1023 inclusive
-
-        const simulatedData = Buffer.from(`${hydroRandom1} ${hydroRandom2} ${ultraRandom1} ${ultraRandom2}\r\n`);
-        this._INTERNAL_LISTENER(simulatedData);
-      }, 1000);
-    } else if (port) {
-      port.on("data", this._INTERNAL_LISTENER.bind(this));
-    }
-  }
-
-  stopListening() {
-    if (SIMULATE_USB) {
-      if (simulationInterval) {
-        clearInterval(simulationInterval);
-        simulationInterval = null;
-        console.log("[SerialPortReader.ts] Stopped simulating USB port data.");
-      }
-    } else if (port) {
-      port.off("data", this._INTERNAL_LISTENER.bind(this));
-    }
+    this.cleanup();
   }
 }
 
