@@ -10,7 +10,7 @@ export const getData = () => baseApi.get("/dash/data") as Promise<AxiosResponse<
 export const getPercentileData = async () => {
   const res = (await getData()).data;
   const HYDROMETER_MAX = 100; // Hydrometer is 0-100
-  const ULTRASONIC_MAX = 450; // Ultrasonic is 0-450
+  const ULTRASONIC_MAX = 100; // Ultrasonic is 0-450
 
   console.log("Res", res)
   return {

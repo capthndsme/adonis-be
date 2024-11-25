@@ -1,6 +1,7 @@
 
 import SettingsService from "./SettingsService.js";
 import { normalize, sleep } from "../util.js";
+import LogService from "./LogService.js";
 
 export type Sensors = {
     sensors: {
@@ -42,6 +43,20 @@ class SensorService {
         this.initialize();
     }
 
+    async saver() {
+        console.log("Saving sensor data")
+        if (this.sensorData) {
+            LogService.createLog(
+                "STATUS_UPDATE",
+                null,
+                "Saving sensor data",
+                JSON.stringify(
+                    this.sensorData
+                )
+            
+            )
+        }
+    }
     private async initialize() {
         if (this.isInitialized) return;
 
@@ -61,6 +76,10 @@ class SensorService {
                 console.log("[SerialPortReader] Running in simulator mode.");
                 this.startSimulator();
             }
+
+            await this.saver();
+            /// every 30 minutes
+            setInterval(this.saver, 30 * 60 * 1000)
         } catch (error) {
             console.error("[SerialPortReader] Initialization error:", error);
      

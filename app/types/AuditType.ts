@@ -4,4 +4,5 @@ export type AuditType =
   "LOGIN" | 
   "LOGOUT" |
   "TIME_AUTOMATION_TRIGGER" |
-  "MANUAL_MODE"
+  "MANUAL_MODE" | 
+  "STATUS_UPDATE"

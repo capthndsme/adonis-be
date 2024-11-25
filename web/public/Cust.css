@@ -1,0 +1,4 @@
+:root, body, html, [data-cust="true"] {
+    --bs-body-bg: #F2EBE2  !important;
+    --bs-popover-max-width: 100% !important;
+}

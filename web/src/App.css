@@ -1,18 +1,123 @@
 #Layout, #root{
 height: 100%;
 min-height: 100vh;
-}
 
+}
+ /* The max width is dependant on the container (more info below) */
+ 
 #Nav {
   position: fixed;
   width: 100%;
   top: 0px;
   left: 0px;
-  height: 60px;
-  background: rgba(24,24,24,0.7);
+  height: 112px;
+  z-index: 100;
+  background:  #D7C2A855;
   backdrop-filter: blur(10px) saturate(150%);
 }
+.tank {
+  width: 250px;
+  aspect-ratio: 1;
+  overflow: hidden;
+  position: relative;
+}
+.tankPerc {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  bottom: 0;left:0;
+  background: #2d84be;
+}
+.relative {
+  position: relative;
+}
+.tankPlant {
+  z-index: 10;
+}
+.tankImage {
+  width: 100%;
+  position: absolute;
+  z-index: 0;
+  top: 0px;
+ 
 
+}
+.textContrast {
+  background-color: rgba(24,24,24,0.7);
+  color: white;
+  margin-top: 16px;
+  padding: 16px 8px;
+}
+.tankText {
+  z-index: 10;
+}
+.gridMain {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+@media screen and (max-width: 600px) {
+  .gridMain {
+    grid-template-columns: 1fr;
+  }
+}
+.tankPerc::after {
+  content: "";
+  background: url("assets/wave.svg");
+
+  position: absolute;
+  top: -188px;
+  width: 9600px;
+  height: 198px;
+  animation: wave 7s cubic-bezier( 0.36, 0.45, 0.63, 0.53) infinite,
+  swell 7s cubic-bezier( 0.36, 0.45, 0.63, 0.53) infinite;
+  transform: translate3d(0, 0, 0) scaleX(0.25) scaleY(0.125);
+  transform-origin: bottom left;
+  
+  z-index: 1;
+  opacity: 0.6;
+
+}
+.tankText {
+  text-align: center;
+  font-size: 24px;
+  padding: 8px;
+}
+.textOverlay {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  z-index: 3;
+}
+.tankPerc::before {
+  content: " ";
+  background: url("assets/wave.svg");
+
+  position: absolute;
+  top: -188px;
+  width: 9600px;
+  height: 198px;
+  animation: wave 7s cubic-bezier( 0.36, 0.45, 0.63, 0.53) infinite reverse;
+  transform: translate3d(0, 0, 0) scaleX(0.25)  scaleY(0.1125);
+  opacity: 1;
+  transform-origin: bottom left;
+  z-index: 1;
+
+}
+.tankOverlay {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+
+  left: 0px;
+  top: 0px;
+   background-image: url('assets/WaterTANK.svg'); 
+  background-repeat: no-repeat;
+  background-position: 100% 100%;
+  background-size: contain; /* or cover, depending on your desired behavior */
+}
 #NavInternal {
   width: 100%;
   margin: 0 auto;
@@ -33,21 +138,49 @@ min-height: 100vh;
 
 .navItem {
   display: flex;
-  color: white;
+  color: black;
   flex-direction: column;
   justify-content: center;
   align-items: center;
   cursor: pointer;
 }
-
+.relative {
+  position: relative;
+}
 .navText {
-  font-size: 0.85rem;
+  font-size: 1.15rem;
 }
 
 #Content {
-  padding-top: 60px;
+  padding-top: 120px;
 }
 
 .navIconContainer {
-  font-size: 1.25rem;
+  font-size: 2rem;
+}
+
+@keyframes wave {
+  0% {
+    margin-left: 0;
+  }
+  100% {
+    margin-left: -1600px;
+  }
+}
+
+@keyframes swell {
+  0%, 100% {
+    transform: translate3d(0, -100, 0) scaleX(0.25) scaleY(0.2175);
+  }
+  50% {
+    transform: translate3d(0, 0, 0) scaleX(0.25) scaleY(0.1125);
+  }
+}
+
+.flex-center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  flex-gap: 16px;
 }

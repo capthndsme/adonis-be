@@ -4,8 +4,8 @@ import AuditService from '../service/AuditService.js'
 export default class AuditsController {
 
   async getAudits({request}: HttpContext) {
-    const {type} = request.qs()
-    const data = AuditService.getAudit(type)
+    const {type, date} = request.qs()
+    const data = AuditService.getAudit(type, date)
     return data;
   }
 }

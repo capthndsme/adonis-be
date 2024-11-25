@@ -3,7 +3,7 @@ import { NavButton } from "./NavButton";
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { Container } from "react-bootstrap";
-
+import appLogo from "../assets/AppLogo.png"
 const NavBar = () => {
   const auth = useAuth();
   const navigate = useNavigate();
@@ -14,7 +14,9 @@ const NavBar = () => {
    return (
       <div id="Nav">
          <Container id="NavInternal">
-            <div id="NavTitle">Moana Pi</div>
+            <div id="NavTitle">
+               <img src={appLogo} style={{height: "100px"}} />
+            </div>
             <div id="NavButtons">
                <NavButton link="/" text="Home">
                   <AiOutlineHome />

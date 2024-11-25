@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
-import { Card, Col, Container, Row } from "react-bootstrap";
+
 import { DashData } from "../types/DashData";
 import { getPercentileData } from "../api/dashDataApi";
-import { Stat } from "../components/Stat";
-import { ThingToText } from "../components/ThingToText";
+import { Tank } from "../components/Tank";
+import pl1 from "../assets/pl1.png"
+import pl2 from "../assets/pl2.png"
+import { SoilMoisture } from "../components/SoilMoisture";
 
 export const Dashboard = (): JSX.Element => {
    const [data, setData] = useState<DashData | null>();
@@ -13,11 +15,14 @@ export const Dashboard = (): JSX.Element => {
       async function fetchData() {
          try {
             const data = await getPercentileData();
+            console.log("Percentile data:", data)
             setData(data);
          } catch (e) {
             console.warn(e);
          } finally {
-            setTimeout(fetchData, 1000);
+            const s =  <SoilMoisture img={pl2} />;
+            console.log(s)
+            setTimeout(fetchData, 1250 + (Math.random() * 120));
             setLoading(false);
          }
       }
@@ -31,38 +36,29 @@ export const Dashboard = (): JSX.Element => {
          </div>
       );
    return (
+      <div>
+         <div>
+            <center>
+               <h1 style={{ padding: "16px", paddingBottom: 0, marginBottom:0 }}>Welcome to Moana!</h1>
+               {
+                  data?.ManualMode && (
+                     <div style={{color: "red", fontSize: "1.25rem"}}>Manual mode enabled. Automations are ignored.</div>
+                  )
+               }
+            </center>
+         </div>
+         <div className="gridMain">
+            <Tank value={data?.UltrasonicA ?? 0} label="Tank 1" />
+            <Tank value={data?.UltrasonicB ?? 0} label="Tank 2" />
+         </div>
 
-      <Card className="mt-4">
-         <Card.Header>At a glance</Card.Header>
-         <Card.Body>
-            {/** 4 cards, 2 on each row */}
-            <Container>
-               <Row>
-                  {data !== null && typeof data === "object"
-                     ?
-                     Object.keys(data).map(
-                        /** @ts-ignore we simply strongly type it, but string callback is incompatible. */
-                        (key: keyof DashData) => {
-                           if (key === "ManualMode" || key === "LastStates") return <></>
-                           return (
-                              <Col sm={6} lg={3} className="p-3" key={key}>
-                                 {/** @ts-ignore somehow broken*/}
-                                 <Stat key={key} name={ThingToText[key]} value={data[key]} />
-                              </Col>
-                           )
-                        })
-                     : null}
-               </Row>
-               <div className="text-center bolder">
-                  Manual mode: {data?.ManualMode ? <span>Enabled.<br />Automations are ignored.</span> : "Disabled"}
-               </div>
-               <Row>
-                  
-               </Row>
-            </Container>
+         <div className="gridMain">
+         <SoilMoisture img={pl1} label="Row 1" hydro={data?.HydrometerA} />
+         <SoilMoisture img={pl2} label="Row 2" hydro={data?.HydrometerB} />
+            
 
-         </Card.Body>
-      </Card>
-
+         </div>
+         
+      </div>
    );
 };

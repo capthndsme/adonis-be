@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
-import { Button, Card, Col, Container, Row } from "react-bootstrap";
-import { getAllSettings, settingStrings, updateSetting, type ISettings } from "../api/settingsApi";
+import { Button, Card, Col, Container } from "react-bootstrap";
+import { getAllSettings, type Setting, settingStrings, updateSetting } from "../api/settingsApi";
 import { toast } from "react-toastify";
+import { useNavigate } from "react-router-dom";
 
 export const Settings = (): JSX.Element => {
-   const [data, setData] = useState<ISettings | null>();
+   const [data, setData] = useState<Setting | null>();
    const [loading, setLoading] = useState(true);
+   const [saving, setSaving] = useState(false);
+   const navigate = useNavigate();
 
    useEffect(() => {
       async function s() {
@@ -17,76 +20,36 @@ export const Settings = (): JSX.Element => {
       s();
    }, []);
 
-   if (loading)
+   if (loading || data === null || !data)
       return (
          <div>
-            <center>Loading...</center>
+            <center>Loading settings...</center>
          </div>
       );
+   
    return (
-      <>
+      <Container>
+         <h2 className="mt-4">Settings</h2>
          <Card className="mt-4">
-            <Card.Header>Settings</Card.Header>
+            <Card.Header>Automations</Card.Header>
             <Card.Body>
-               {/** 4 cards, 2 on each row */}
                <Container>
-                  <Row className="mb-2">
-                     {!loading &&
-                        data !== null &&
-                        typeof data !== "undefined" &&
-                        Object.keys(data).map((key) => {
-                           return <SettingView key={key} settingKey={key as keyof ISettings} settingValue={data[key as keyof ISettings]} />;
-                        })}
-                  </Row>
+                  <h3>Automation profiles</h3>
+                  Save Configuration as Profile<br/>
+                  <Button>Save</Button>
                </Container>
             </Card.Body>
          </Card>
-      </>
+         
+
+         <Card className="mt-4">
+            <Card.Header>General</Card.Header>
+            <Card.Body>
+               <Button className="w-100" onClick={() => navigate("/audit")} >Audit Log</Button>
+            </Card.Body>
+         </Card>
+      </Container>
    );
 };
 
-export const SettingView = ({
-   settingKey,
-   settingValue,
-}: {
-   settingKey: keyof ISettings;
-   settingValue: ISettings[keyof ISettings];
-}) => {
-   const [value, setValue] = useState(() => typeof settingValue === "number" ? settingValue * 100 : settingValue );
-   const [updating, setUpdating] = useState(false);
-   const setSetting = async () => {
-      setUpdating(true);
-      try {
-         await updateSetting(settingKey, typeof value === "number" && settingKey !== "watering_duration_seconds" ? value / 100 : value);
-         toast.success("Setting saved!");
-      } catch (e) {
-         toast.error("Error saving setting!");
-      } finally {
-         setUpdating(false);
-      }
-   };
-   if (settingKey === "password") return null;
-   return (
  
-         <Col sm={6} lg={4} key={settingKey} className="my-3"> 
-            <Card>
-               <Card.Header>{settingStrings[settingKey]} </Card.Header>
-               <Card.Body>
-                <div className="d-flex justify-content-between align-items-center">
-                <input 
-                type={typeof settingValue === "number" ? "number" : "text"}
-                value={value}
-                className="w-100"
-                onChange={(e) => setValue(e.target.value + 0)}
-                />
-                <div className="px-2">{settingKey === "watering_duration_seconds" ? "seconds" : "%"}</div>
-                </div>
-      
-                {updating && <center>Updating...</center>}
-                <Button onClick={setSetting} className="mt-2 w-100" variant="primary" disabled={updating}>Save</Button>
-               </Card.Body>
-            </Card>
-         </Col>
-    
-   );
-};

@@ -1,8 +1,7 @@
 import { Navigate, Outlet } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import NavBar from './NavBar';
-import { Container } from 'react-bootstrap';
-
+ 
 
 const ProtectedRoute = () => {
   const auth = useAuth();
@@ -17,7 +16,7 @@ const ProtectedRoute = () => {
   // returns child route elements
   return <div id="Layout">
     <NavBar /> 
-    <Container id="Content"><Outlet /></Container>
+    <div id="Content"><Outlet /></div>
   </div>
 }
 export default ProtectedRoute

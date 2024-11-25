@@ -143,6 +143,10 @@ class Settings {
     this.#settings.password = await this.#bcrypt.make(password);
     this.saveSetting();
   }
+
+  reboot() {
+    process.exit(0);
+  }
 }
 
 
