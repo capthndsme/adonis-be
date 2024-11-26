@@ -15,6 +15,7 @@ const AuthController = () => import('../app/controllers/auth_controller.js')
 const DataController = () => import('../app/controllers/data_controller.js')
 const SettingsController = () => import('../app/controllers/settings_controller.js')
 const AuditsController = () => import('../app/controllers/audits_controller.js')
+const UsersController = () => import('../app/controllers/users_controller.js')
 
 
 router.get('/', async () => {
@@ -34,7 +35,15 @@ router.group(() => {
   router.post('/settings/set', [SettingsController, 'setSettings'])
   router.get('/settings/presets', [SettingsController, 'getPresets'])
   router.post('/settings/preset/create', [SettingsController, 'createPreset'])
+  router.delete('/settings/preset/:id', [SettingsController, 'deleteSetting'])
+
   router.post('/login', [AuthController, 'login'] )
+  router.post('/users/create', [UsersController, 'createUser'])
+  router.put('/users/modify', [UsersController, 'modifyUser'])
+  router.delete('/users/delete/:id', [UsersController, 'deleteUser'])
+  router.get('/users/list', [UsersController, 'listUsers'])
+
+  
 })
 .prefix('/api')
 .use([middleware.auth()])

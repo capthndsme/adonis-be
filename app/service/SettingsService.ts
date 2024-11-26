@@ -112,10 +112,8 @@ class Settings {
         ...this.#settings.thresholds,
         ...config.thresholds
       },
-      intervals: {
-        ...this.#settings.intervals,
-        ...config.intervals
-      },
+      waterTimes: config.waterTimes ?? this.#settings.waterTimes,
+     
        
     };
     this.saveSetting();

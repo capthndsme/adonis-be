@@ -1,7 +1,7 @@
 import { DateTime } from 'luxon'
 import { BaseModel, column } from '@adonisjs/lucid/orm'
 
-export default class Token extends BaseModel {
+export default class User extends BaseModel {
   @column({ isPrimary: true })
   declare id: number
 
@@ -12,10 +12,18 @@ export default class Token extends BaseModel {
   declare updatedAt: DateTime
 
   @column()
-  declare token: string;
+  declare name: string
 
   @column()
-  declare userId: number
+  declare username: string | null
 
-  
-}
+  @column()
+  declare enabled?: boolean
+ 
+  @column()
+  declare superAdmin: boolean | null
+
+  @column()
+  declare password: string | null
+ 
+} 

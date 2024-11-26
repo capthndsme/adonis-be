@@ -11,6 +11,7 @@ export default class extends BaseSchema {
       table.timestamp('updated_at')
 
       table.string('token')
+      table.integer('user_id')
     })
   }
 

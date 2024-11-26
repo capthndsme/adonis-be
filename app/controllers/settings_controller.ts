@@ -28,5 +28,12 @@ export default class SettingsController {
   }
 
 
+  async deleteSetting({request}: HttpContext) {
+    const {id} = request.params();
+    const data = await SettingsService.deletePreset(Number(id));
+    return data;
+  }
+
+
 
 }

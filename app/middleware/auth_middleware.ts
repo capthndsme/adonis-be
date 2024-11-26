@@ -18,7 +18,8 @@ export default class AuthServiceMiddleware {
      * Middleware logic goes here (before the next call)
      */
     const validate = await AuthService.validToken(
-      ctx.request.header("Authorization")?.replace("Bearer ", "") ?? ""
+      ctx.request.header("Authorization")?.replace("Bearer ", "") ?? "",
+      Number(ctx.request.header("X-user-id")?.replace("Bearer ", "") ?? "-1"),
     );
     if (validate) {
       console.log("Called")
