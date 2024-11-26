@@ -18,8 +18,6 @@ export default class extends BaseSchema {
       
     })
 
-    // init defolt. Username moana. Password $2a$10$QHbsQveqUbpu84FSol.XzODBrJ0vjxKG7SQDif2VsetHVEa/QR0I6
-    await this.schema.raw(`INSERT INTO ${this.tableName} (name, username, enabled, super_admin, password) VALUES ('Moana Admin', 'moana', true, true, '$2a$10$QHbsQveqUbpu84FSol.XzODBrJ0vjxKG7SQDif2VsetHVEa/QR0I6')`)
 
 
   }
