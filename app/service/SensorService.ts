@@ -58,7 +58,7 @@ class SensorService {
         }
     }
     private async initialize() {
-        if (this.isInitialized) return;
+        if (this.isInitialized) return console.log("Serial Reader - Already init!");
 
         try {
             // Wait for settings service to be ready
@@ -76,10 +76,9 @@ class SensorService {
                 console.log("[SerialPortReader] Running in simulator mode.");
                 this.startSimulator();
             }
-
-            await this.saver();
-            /// every 30 minutes
-            setInterval(this.saver, 30 * 60 * 1000)
+    
+      
+     
         } catch (error) {
             console.error("[SerialPortReader] Initialization error:", error);
      
@@ -90,9 +89,14 @@ class SensorService {
     private startPolling() {
         console.log("[SerialPortReader] Starting data polling...");
         this.fetchSensorData(); // Initial fetch
+        this.saver();
          setInterval(() => {
             this.fetchSensorData();
         }, 4000); // Poll every 4 seconds
+
+        setInterval(() => {
+            this.saver();
+        }, 5 * 60 * 1000) // 5 minutes datagraph
     }
 
     // Fetch sensor data from the local server
