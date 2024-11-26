@@ -4,7 +4,7 @@ export default class extends BaseSchema {
   protected tableName = 'users'
 
   async up() {
-    await this.schema.createTable(this.tableName, (table) => {
+    this.schema.createTable(this.tableName, (table) => {
       table.increments('id').primary()
 
       table.timestamp('created_at')
@@ -18,6 +18,8 @@ export default class extends BaseSchema {
       
     })
 
+    // init defolt. Username moana. Password $2a$10$QHbsQveqUbpu84FSol.XzODBrJ0vjxKG7SQDif2VsetHVEa/QR0I6
+ 
 
 
   }
