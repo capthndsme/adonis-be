@@ -12,6 +12,8 @@ export const Dashboard = (): JSX.Element => {
    const [loading, setLoading] = useState(true);
 
    useEffect(() => {
+      let canceller: number | null = null; 
+ 
       async function fetchData() {
          try {
             const data = await getPercentileData();
@@ -22,8 +24,12 @@ export const Dashboard = (): JSX.Element => {
          } finally {
             const s =  <SoilMoisture img={pl2} />;
             console.log(s)
-            setTimeout(fetchData, 1250 + (Math.random() * 120));
+            canceller = setTimeout(fetchData, 1250 + (Math.random() * 120)) as unknown as number;
             setLoading(false);
+         }
+         return () => {
+            if (canceller !== null)
+               clearTimeout(canceller);
          }
       }
       fetchData();

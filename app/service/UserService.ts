@@ -101,6 +101,19 @@ class UserService {
     }));
 
   }
+
+  async getMe(actorUserId: string) {
+    const user = await User.query().where("id", actorUserId).first();
+    if (!user) throw new Error("User not found");
+    return {
+      id: user.id,
+      name: user.name,
+      username: user.username,
+      enabled: user.enabled,
+      superAdmin: user.superAdmin,
+    };
+
+  }
 }
 
 

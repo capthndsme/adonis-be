@@ -8,22 +8,29 @@ import { baseApi } from "../api/baseApi";
 import { toast } from "react-toastify";
 export const Login = (): JSX.Element => {
    const [password, setPassword] = useState("");
+   const [username, setUsername] = useState("");
    const [loading, setLoading] = useState(false);
    const navigate = useNavigate();
    const auth = useAuth();
    const login = async () => {
       try {
          setLoading(true);
-         const result = await authApi.login(password);
+         const result = await authApi.login(username, password);
          if (result.status === 201) {
             auth.setHash(result.data);
-            baseApi.defaults.headers.common.Authorization = result.data;
+            baseApi.defaults.headers.common.Authorization = result.data.token;
+            baseApi.defaults.headers.common['X-user-id'] = result.data.userId.toString();
+            console.log(result.data, baseApi.defaults.headers.common['X-user-id'])
+
+            await new Promise((resolve) => setTimeout(resolve, 560));
+            toast("Logged in successfully", { type: "success" });
             navigate("/");
          }
       } catch (e) {
+
          if (e instanceof AxiosError) {
             if (e?.response?.status === 403) {
-               toast("Error logging in: Invalid Password", { type: "error" });
+               toast("Error logging in: Invalid Username or Password", { type: "error" });
             } else {
                toast("Error logging in: " + e.message, { type: "error" });
             }
@@ -40,8 +47,21 @@ export const Login = (): JSX.Element => {
             <Card.Header>Login to Moana</Card.Header>
             <Card.Body>
                <Form.Group>
+                  <Form.Label>Username</Form.Label>
+                  <Form.Control value={username} onChange={(v) => setUsername(v.currentTarget.value)}  onKeyUp={(e) => {
+                     if (e.key === 'Enter') {
+                        login();
+                     }
+                  }}/>
+               </Form.Group>
+               <Form.Group>
                   <Form.Label>Password</Form.Label>
-                  <Form.Control type="password" value={password} onChange={(v) => setPassword(v.currentTarget.value)} />
+                  <Form.Control type="password" value={password} onChange={(v) => setPassword(v.currentTarget.value)} onKeyUp={(e) => {
+                     if (e.key === 'Enter') {
+                        login();
+                     }
+                  }}
+                  />
                </Form.Group>
             </Card.Body>
             <Card.Footer>

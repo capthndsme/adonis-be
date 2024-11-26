@@ -20,10 +20,11 @@ const UsersController = () => import('../app/controllers/users_controller.js')
 
 router.get('/', async () => {
   return {
-    hello: 'world',
+    hello: 'world'
   }
 })
 
+ 
 
 /**
  * AUTH ROUTE GROUP.
@@ -36,6 +37,7 @@ router.group(() => {
   router.get('/settings/presets', [SettingsController, 'getPresets'])
   router.post('/settings/preset/create', [SettingsController, 'createPreset'])
   router.delete('/settings/preset/:id', [SettingsController, 'deleteSetting'])
+  router.get('/users/me', [UsersController, 'getMe'])
 
   router.post('/login', [AuthController, 'login'] )
   router.post('/users/create', [UsersController, 'createUser'])

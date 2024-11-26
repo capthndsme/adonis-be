@@ -53,5 +53,16 @@ export default class UsersController {
       response.status(400).send(e.message)
     }
   }
+  
+  async getMe({ request, response }: HttpContext) {
+    const actorUserId = Number(request.header("X-user-id") ?? -1);
+    try {
+      const user = await UserService.getMe(actorUserId.toString());
+      response.status(200).send(user);
+    } catch (e) {
+      response.status(400).send(e.message)
+    }
+
+  }
 
 }
