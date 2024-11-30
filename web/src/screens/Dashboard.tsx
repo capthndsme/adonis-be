@@ -17,22 +17,25 @@ export const Dashboard = (): JSX.Element => {
       async function fetchData() {
          try {
             const data = await getPercentileData();
-            console.log("Percentile data:", data)
+        
             setData(data);
          } catch (e) {
             console.warn(e);
          } finally {
-            const s =  <SoilMoisture img={pl2} />;
-            console.log(s)
-            canceller = setTimeout(fetchData, 1250 + (Math.random() * 120)) as unknown as number;
+            
             setLoading(false);
          }
-         return () => {
-            if (canceller !== null)
-               clearTimeout(canceller);
-         }
+    
       }
       fetchData();
+
+      if (canceller) clearInterval(canceller)
+      
+      canceller = setInterval(fetchData, 2000) as unknown as number;
+      return () => {
+         if (canceller !== null)
+            clearInterval(canceller);
+      }
    }, []);
 
    if (loading)

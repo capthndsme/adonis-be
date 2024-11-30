@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { Button, Card, Col, Container } from "react-bootstrap";
+import { Button, Card, Container } from "react-bootstrap";
 import { getAllSettings, type Setting, settingStrings, updateSetting } from "../api/settingsApi";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
+import UserEditor from "../components/UserEditor";
 
 export const Settings = (): JSX.Element => {
    const [data, setData] = useState<Setting | null>();
@@ -48,6 +49,10 @@ export const Settings = (): JSX.Element => {
                <Button className="w-100" onClick={() => navigate("/audit")} >Audit Log</Button>
             </Card.Body>
          </Card>
+
+         <UserEditor />
+
+         
       </Container>
    );
 };

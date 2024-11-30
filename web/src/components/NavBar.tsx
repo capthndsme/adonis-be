@@ -1,15 +1,15 @@
 import { AiOutlineHome, AiOutlineLogout, AiOutlineSetting } from "react-icons/ai";
 import { NavButton } from "./NavButton";
 import { useAuth } from "../contexts/AuthContext";
-import { useNavigate } from "react-router-dom";
+ 
 import { Container } from "react-bootstrap";
 import appLogo from "../assets/AppLogo.png"
 const NavBar = () => {
   const auth = useAuth();
-  const navigate = useNavigate();
+ 
   const logout = () => {
     auth.setHash(null);
-    navigate("/auth/login")
+   location.href = "/auth/login"
   }
    return (
       <div id="Nav">

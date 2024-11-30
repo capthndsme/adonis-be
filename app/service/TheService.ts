@@ -6,13 +6,21 @@ import SensorService, { Sensors } from "./SensorService.js";
 import SettingsService from "./SettingsService.js";
 import LogService from "./LogService.js";
 import { sleep } from "../util.js";
- 
+
 
 class TheService {
 
   booted = false;
   private lastAboveHigh = false;  // for tank control
   private lastAboveHighA = false; // for soil moisture A
+  private loggedOutflowAOn: boolean = false;
+  private loggedOutflowAOff: boolean = false;
+  private loggedOutflowBOn: boolean = false;
+  private loggedOutflowBOff: boolean = false;
+  private loggedTapOn: boolean = false;
+  private loggedTapOff: boolean = false;
+  private loggedRainwaterOn: boolean = false;
+  private loggedRainwaterOff: boolean = false;
   private isInManualMode = false;
   private lastAboveHighB = false; // for soil moisture B // Track if we were previously above HighThresh
   private readonly LOW_THRESH = 20;
@@ -92,36 +100,189 @@ class TheService {
     const { sensors } = this.currentData;
 
     // Check soil moisture A with hysteresis
-    if (sensors.soilMoisture.A >= thresholds.soilMoisture.high) {
-      GpioService.writeGpio('outflowA', 1);  // Turn OFF
-      this.lastAboveHighA = true;
-      console.log("Turning off Outflow A (above HIGH)");
-    } else if (this.lastAboveHighA && sensors.soilMoisture.A >= thresholds.soilMoisture.low) {
-      GpioService.writeGpio('outflowA', 1);  // Keep OFF until goes below low
-      console.log("Keeping Outflow A off (waiting for LOW)");
-    } else if (sensors.soilMoisture.A < thresholds.soilMoisture.low) {
-      GpioService.writeGpio('outflowA', 0);  // Turn ON
-      this.lastAboveHighA = false;
-      console.log("Turning on Outflow A (below LOW)");
+    if (SettingsService.getSettings().thresholdEnabled) {
+      this.soilMoistureChecking(sensors, thresholds);
+    } else {
+      console.log('Threshold disabled - skipping soil moisture check')
     }
 
-    // Check soil moisture B with hysteresis
-    if (sensors.soilMoisture.B >= thresholds.soilMoisture.high) {
-      GpioService.writeGpio('outflowB', 1);  // Turn OFF
-      this.lastAboveHighB = true;
-      console.log("Turning off Outflow B (above HIGH)");
-    } else if (this.lastAboveHighB && sensors.soilMoisture.B >= thresholds.soilMoisture.low) {
-      GpioService.writeGpio('outflowB', 1);  // Keep OFF until goes below low
-      console.log("Keeping Outflow B off (waiting for LOW)");
-    } else if (sensors.soilMoisture.B < thresholds.soilMoisture.low) {
-      GpioService.writeGpio('outflowB', 0);  // Turn ON
-      this.lastAboveHighB = false;
-      console.log("Turning on Outflow B (below LOW)");
+    // allow time
+    await sleep(1000);
+
+    // time base
+    if (SettingsService.getSettings().timerBaseEnabled) {
+      await this.timerBasedCheck();
+    } else {
+      console.log('Timer base disabled - skipping timer check')
     }
+
 
     this.controlWaterTransfer(sensors);
     console.log("Data check completed");
   }
+
+  async timerBasedCheck() {
+    // get Time in UTC8
+    const now = new Date();
+
+    // scheduler loop - ALLOW for 10 minute clock late execution (for example systme restarted)
+    // else - log message
+
+    const waterTimes = SettingsService.getSettings().waterTimes;
+
+
+    if (!waterTimes) return console.log("No water times set")
+
+    for (const { hours, minutes } of waterTimes) {
+      const targetTime = new Date();
+      targetTime.setHours(hours, minutes, 0, 0); // Set target time in UTC+8
+      const timeKey = `${hours}:${minutes}`; // Unique key for each scheduled time
+
+      const timeDiff = now.getTime() - targetTime.getTime();
+      const tenMinutesInMillis = 10 * 60 * 1000;
+
+      if (timeDiff >= 0 && timeDiff <= tenMinutesInMillis) {
+        if (this.shouldExecute(now, timeKey)) {
+          console.log(`Executing task for time: ${hours}:${minutes} (late by ${timeDiff / 60000} minutes)`);
+          await this.executeTask(hours, minutes);
+          this.lastExecutionDates[timeKey] = now;
+          LogService.createLog(
+            "AUTOMATION_TRIGGER",
+            null,
+            `Timer-Based: Watering at ${hours}:${minutes}`,
+            null
+          );
+
+        } else {
+          console.log(`Task for ${hours}:${minutes} already executed today`);
+        }
+      } else if (timeDiff < 0) {
+        console.log(`Waiting for time: ${hours}:${minutes}`);
+      } else {
+        console.log(`Task for ${hours}:${minutes} is more than 10 minutes late, skipping`);
+        LogService.createLog(
+          "AUTOMATION_TRIGGER",
+          null,
+          "Time-Based: Watering task is more than 10 minutes late. Skipping.",
+          null
+        );
+      }
+    }
+  }
+
+  private lastExecutionDates: { [key: string]: Date } = {}; // Store last execution date for each time
+
+  private shouldExecute(now: Date, timeKey: string): boolean {
+    if (!this.lastExecutionDates[timeKey]) {
+      return true; // First time execution for this time
+    }
+
+    return !this.isSameDay(now, this.lastExecutionDates[timeKey]);
+  }
+
+  private isSameDay(date1: Date, date2: Date): boolean {
+    return date1.getFullYear() === date2.getFullYear() &&
+      date1.getMonth() === date2.getMonth() &&
+      date1.getDate() === date2.getDate();
+  }
+
+  private async executeTask(hours: number, minutes: number) {
+    console.log(`Task for ${hours}:${minutes} executed!`);
+  }
+
+  async timerBasedWater() {
+    if (this.currentData === null || this.currentData === undefined) return;
+    console.log("Performing timer-based watering...")
+    const { thresholds } = SettingsService.getSettings();
+    if (thresholds.tankLevel.low > this.currentData?.sensors.ultrasonic.mainTank) {
+      console.log("Not enough water in the main tank, skipping watering.");
+      return;
+    }
+    // Implement your watering logic here, considering soil moisture levels and other factors
+    console.log("Performing timer-based watering...");
+    // Example: Turn on outflowA for a specific duration
+    GpioService.writeGpio('outflowA', 0); // Turn ON
+    await sleep(10000); // Water for 10 seconds
+    GpioService.writeGpio('outflowA', 1); // Turn OFF
+    console.log("Timer-based watering completed.");
+
+  }
+  private soilMoistureChecking(
+    sensors: {
+      soilMoisture: { A: number; B: number };
+      ultrasonic: { mainTank: number; secondTank: number };
+    },
+    thresholds: { soilMoisture: { low: number; high: number }; tankLevel: { low: number } }
+  ) {
+    // Soil Moisture A Check
+    if (sensors.soilMoisture.A >= thresholds.soilMoisture.high) {
+      GpioService.writeGpio("outflowA", 1); // Turn OFF
+      this.lastAboveHighA = true;
+      if (!this.loggedOutflowAOff) {
+        console.log("Turning off Outflow A (above HIGH)");
+        LogService.createLog(
+          "AUTOMATION_TRIGGER",
+          null,
+          `Soil moisture A: Rose above ${thresholds.soilMoisture.high}%, turning off Outflow A.`,
+          null
+        );
+        this.loggedOutflowAOff = true;
+        this.loggedOutflowAOn = false;
+      }
+    } else if (this.lastAboveHighA && sensors.soilMoisture.A >= thresholds.soilMoisture.low) {
+      GpioService.writeGpio("outflowA", 1); // Keep OFF until goes below low
+      console.log("Keeping Outflow A off (waiting for LOW)");
+    } else if (sensors.soilMoisture.A < thresholds.soilMoisture.low) {
+      GpioService.writeGpio("outflowA", 0); // Turn ON
+      this.lastAboveHighA = false;
+      if (!this.loggedOutflowAOn) {
+        console.log("Turning on Outflow A (below LOW)");
+        LogService.createLog(
+          "AUTOMATION_TRIGGER",
+          null,
+          `Soil moisture A: Dropped to ${sensors.soilMoisture.A}%, turning on Outflow A.`,
+          null
+        );
+        this.loggedOutflowAOn = true;
+        this.loggedOutflowAOff = false;
+      }
+    }
+
+    // Soil Moisture B Check
+    if (sensors.soilMoisture.B >= thresholds.soilMoisture.high) {
+      GpioService.writeGpio("outflowB", 1); // Turn OFF
+      this.lastAboveHighB = true;
+      if (!this.loggedOutflowBOff) {
+        console.log("Turning off Outflow B (above HIGH)");
+        LogService.createLog(
+          "AUTOMATION_TRIGGER",
+          null,
+          `Soil moisture B: Rose above ${thresholds.soilMoisture.high}%, turning off Outflow B.`,
+          null
+        );
+        this.loggedOutflowBOff = true;
+        this.loggedOutflowBOn = false;
+      }
+    } else if (this.lastAboveHighB && sensors.soilMoisture.B >= thresholds.soilMoisture.low) {
+      GpioService.writeGpio("outflowB", 1); // Keep OFF until goes below low
+      console.log("Keeping Outflow B off (waiting for LOW)");
+    } else if (sensors.soilMoisture.B < thresholds.soilMoisture.low) {
+      GpioService.writeGpio("outflowB", 0); // Turn ON
+      this.lastAboveHighB = false;
+      if (!this.loggedOutflowBOn) {
+        console.log("Turning on Outflow B (below LOW)");
+        LogService.createLog(
+          "AUTOMATION_TRIGGER",
+          null,
+          `Soil moisture B: Dropped to ${sensors.soilMoisture.B}%, turning on Outflow B.`,
+          null
+        );
+        this.loggedOutflowBOn = true;
+        this.loggedOutflowBOff = false;
+      }
+    }
+  }
+
 
   controlWaterTransfer(sensors: {
     soilMoisture: { A: number; B: number };
@@ -136,10 +297,30 @@ class TheService {
     // Control tap water to main tank transfer
     if (T2 < this.LOW_THRESH) {
       GpioService.writeGpio('tapToMain', 0);  // Open valve (0 = on)
-      console.log("Opening tap water to main tank transfer");
+      if (!this.loggedTapOn) {
+        console.log("Opening tap water to main tank transfer");
+        LogService.createLog(
+          "AUTOMATION_TRIGGER",
+          null,
+          `Main tank level: Dropped to ${T2}%, opening tap water transfer.`,
+          null
+        );
+        this.loggedTapOn = true;
+        this.loggedTapOff = false;
+      }
     } else {
       GpioService.writeGpio('tapToMain', 1);  // Close valve (1 = off)
+      if (!this.loggedTapOff) {
       console.log("Closing tap water to main tank transfer");
+        LogService.createLog(
+          "AUTOMATION_TRIGGER",
+          null,
+          `Main tank level: Rose above ${this.LOW_THRESH}%, closing tap water transfer.`,
+          null
+        );
+        this.loggedTapOff = true;
+        this.loggedTapOn = false;
+      }
     }
 
     // Control rainwater to main tank transfer
@@ -147,7 +328,17 @@ class TheService {
       // Above HighThresh (80%): Close valve and mark state
       GpioService.writeGpio('rainwaterToMain', 1);  // Close valve
       this.lastAboveHigh = true;
-      console.log("Closing rainwater to main tank transfer (above HIGH_THRESH)");
+      if (!this.loggedRainwaterOff) {
+        console.log("Closing rainwater to main tank transfer (above HIGH_THRESH)");
+        LogService.createLog(
+          "AUTOMATION_TRIGGER",
+          null,
+          `Main tank level: Reached ${T2}%, closing rainwater transfer.`,
+          null
+        );
+        this.loggedRainwaterOff = true;
+        this.loggedRainwaterOn = false;
+      }
     } else if (this.lastAboveHigh && T2 >= this.REOPEN_THRESH) {
       // Was previously above HighThresh and still above REOPEN_THRESH: Keep closed
       GpioService.writeGpio('rainwaterToMain', 1);  // Keep valve closed
@@ -156,12 +347,33 @@ class TheService {
       // Dropped below REOPEN_THRESH: Reset state and open valve
       this.lastAboveHigh = false;
       GpioService.writeGpio('rainwaterToMain', 0);  // Open valve
+      if (!this.loggedRainwaterOn) {
       console.log("Opening rainwater to main tank transfer (reached REOPEN_THRESH)");
+        LogService.createLog(
+          "AUTOMATION_TRIGGER",
+          null,
+          `Main tank level: Dropped to ${T2}%, opening rainwater transfer.`,
+          null
+        );
+        this.loggedRainwaterOn = true;
+        this.loggedRainwaterOff = false;
+      }
     } else if (T2 < this.LOW_THRESH) {
       // Below LowThresh: Open valve
       GpioService.writeGpio('rainwaterToMain', 0);  // Open valve
+      if (!this.loggedRainwaterOn) {
       console.log("Opening rainwater to main tank transfer (below LOW_THRESH)");
+        LogService.createLog(
+          "AUTOMATION_TRIGGER",
+          null,
+          `Main tank level: Dropped to ${T2}%, opening rainwater transfer.`,
+          null
+        );
+        this.loggedRainwaterOn = true;
+        this.loggedRainwaterOff = false;
+      }
     } else {
+
       // Between LowThresh and HighThresh (normal operation)
       GpioService.writeGpio('rainwaterToMain', 0);  // Keep valve open
       console.log("Keeping rainwater to main tank transfer open (normal operation)");
@@ -171,6 +383,7 @@ class TheService {
     console.log(`Current levels - Main Tank (T2): ${T2}%, Second Tank (T1): ${T1}%`);
   }
 
+ 
 
   /**
    * DATA CHECK END

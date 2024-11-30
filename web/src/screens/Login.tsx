@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button, Card, Container, Form } from "react-bootstrap";
 import { useAuth } from "../contexts/AuthContext";
 import authApi from "../api/authApi";
-import { useNavigate } from "react-router-dom";
+ 
 import { AxiosError } from "axios";
 import { baseApi } from "../api/baseApi";
 import { toast } from "react-toastify";
@@ -10,7 +10,7 @@ export const Login = (): JSX.Element => {
    const [password, setPassword] = useState("");
    const [username, setUsername] = useState("");
    const [loading, setLoading] = useState(false);
-   const navigate = useNavigate();
+ 
    const auth = useAuth();
    const login = async () => {
       try {
@@ -20,11 +20,11 @@ export const Login = (): JSX.Element => {
             auth.setHash(result.data);
             baseApi.defaults.headers.common.Authorization = result.data.token;
             baseApi.defaults.headers.common['X-user-id'] = result.data.userId.toString();
-            console.log(result.data, baseApi.defaults.headers.common['X-user-id'])
+ 
 
             await new Promise((resolve) => setTimeout(resolve, 560));
             toast("Logged in successfully", { type: "success" });
-            navigate("/");
+            location.href="/"
          }
       } catch (e) {
 

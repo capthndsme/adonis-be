@@ -11,8 +11,7 @@ export const getPercentileData = async (cancelToken? : CancelToken) => {
   const res = (await getData(cancelToken)).data;
   const HYDROMETER_MAX = 100; // Hydrometer is 0-100
   const ULTRASONIC_MAX = 100; // Ultrasonic is 0-450
-
-  console.log("Res", res)
+ 
   return {
     HydrometerA: res.HydrometerA ? (res.HydrometerA / HYDROMETER_MAX * 100) : 0,
     HydrometerB: res.HydrometerB ? (res.HydrometerB / HYDROMETER_MAX * 100) : 0,

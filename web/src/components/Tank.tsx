@@ -1,5 +1,4 @@
-export const Tank = ({ value, unit = "L", label, percValue }: { percValue?: number, value: number, label?: string, unit?: string }) => {
-    console.log({value})
+export const Tank = ({ value, unit = "L", label }: { percValue?: number, value: number, label?: string, unit?: string }) => {
     return <div style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", padding: 16 }}>
         <div className="tank">
             <div className="tankOverlay" />
