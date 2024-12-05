@@ -12,8 +12,13 @@ min-height: 100vh;
   left: 0px;
   height: 112px;
   z-index: 100;
-  background:  #D7C2A855;
+  background:  #d7c2a8bd;
   backdrop-filter: blur(10px) saturate(150%);
+  animation: loadFlyIn 300ms ease-in-out;
+  
+}
+.fly-in {
+  animation: loadFlyIn 300ms ease-in-out;
 }
 .tank {
   width: 250px;
@@ -158,7 +163,9 @@ min-height: 100vh;
 .navIconContainer {
   font-size: 2rem;
 }
-
+* {
+  transition: all 300ms ease-in-out, color 0ms linear;
+}
 @keyframes wave {
   0% {
     margin-left: 0;
@@ -168,6 +175,17 @@ min-height: 100vh;
   }
 }
 
+@keyframes loadFlyIn {
+  0% {
+    transform: translateY(-100%);
+    filter: blur(8px)
+  }
+ 
+  100% {
+    transform: translateY(0);
+    filter: blur(0px)
+  }
+}
 @keyframes swell {
   0%, 100% {
     transform: translate3d(0, -100, 0) scaleX(0.25) scaleY(0.2175);
@@ -182,5 +200,41 @@ min-height: 100vh;
   justify-content: center;
   align-items: center;
   flex-direction: column;
-  flex-gap: 16px;
+  gap: 16px;
 }
+
+/**
+horizontal baseline items
+*/
+.h-baseline {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.w-sm {
+  width: 70px;
+}
+
+
+.loader-animation, .card {
+  animation: loader 350ms ease-in-out;
+
+}
+
+@keyframes loader {
+  0% {
+    filter: blur(4px);
+    transform-origin: left top;
+    opacity: 0;
+    transform: translateY(-30px) scale(0.85) rotateY(30deg);
+  }
+  100% {
+    filter: blur(0px);
+    opacity: 1;
+
+    transform-origin: left top;
+    transform: translateY(0px) scale(1);
+  }
+}
+

@@ -90,8 +90,8 @@ export const getAllSettings = () =>
 export const getSetting = (key: keyof Setting) =>
   baseApi.get(`/settings/${key}`) as Promise<AxiosResponse<{ [key: string]: any }>>;
 
-export const updateSetting = (key: keyof Setting, value: any) =>
-  baseApi.post("/settings/set", { key, value }) as Promise<AxiosResponse<any>>;
+export const updateSetting = (val: Partial<Setting>, ) =>
+  baseApi.post("/settings/set", val) as Promise<AxiosResponse<any>>;
 
 
 export const getPreset = () => baseApi.get("/settings/presets") as Promise<AxiosResponse<Setting[]>>;

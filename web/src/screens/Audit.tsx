@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { Button, Container, OverlayTrigger, Pagination, Popover, Table } from "react-bootstrap";
+import { Button, OverlayTrigger, Pagination, Popover, Table } from "react-bootstrap";
 import { DayPicker } from "react-day-picker";
 import "react-day-picker/dist/style.css"; // Ensure this is imported for proper styling
 import { AuditText, Audit as AuditType, getAudits } from "../api/settingsApi";
- 
+import { DelayRender } from "../components/DelayRender";
+
 export const Audit = () => {
   const [selected, setSelected] = useState<Date>(() => new Date());
   const [loading, setLoading] = useState(false);
@@ -18,7 +19,7 @@ export const Audit = () => {
   }, [selected])
   const popover = (
     <Popover id="day-picker-popover" data-cust="true">
-   <Popover.Body style={{  padding: "0px 8px" }}>
+      <Popover.Body style={{ padding: "0px 8px" }}>
         <DayPicker
           mode="single"
           selected={selected}
@@ -30,17 +31,17 @@ export const Audit = () => {
   );
 
   return (
-    <Container>
-      <h2 className="mt-4">Audit Log</h2>
+
+
+    <>  
       <OverlayTrigger trigger="click" placement="bottom" overlay={popover} rootClose>
-        <Button variant="primary">Date: {selected.toLocaleDateString()}</Button>
+        <Button variant="secondary">Date: {selected.toLocaleDateString()}</Button>
       </OverlayTrigger>
       {
-        loading 
-        ? <center>Loading Audit Log...</center>
-        : <RenderAudit audits={audits.filter(a => a.action !== "STATUS_UPDATE")} />
-      }
-    </Container>
+        loading
+          ? <center>Loading Audit Log...</center>
+          : <RenderAudit audits={audits.filter(a => a.action !== "STATUS_UPDATE")} />
+      }</>
   );
 };
 
@@ -77,14 +78,17 @@ const RenderAudit = ({ audits }: { audits: AuditType[] }) => {
           {currentAudits.map((audit, index) => {
             const dateLocal = new Date(audit.createdAt)
             const dateString = `${dateLocal.toLocaleDateString()} ${dateLocal.toLocaleTimeString()}`
-          return (
-            <tr key={index}>
-              <td>{startIndex + index + 1}</td>
-              <td>{dateString}</td>
+            return (
+             <DelayRender delay={index * 10} key={index}>
+               <tr className="loader-animation fly-in">
+                <td>{startIndex + index + 1}</td>
+                <td>{dateString}</td>
                 <td>{AuditText[audit.action]}</td>
-              <td>{audit.actionDescription}</td>
-            </tr>
-          )})}
+                <td>{audit.actionDescription}</td>
+              </tr>
+             </DelayRender>
+            )
+          })}
         </tbody>
       </Table>
       <Pagination>
