@@ -96,4 +96,4 @@ export const updateSetting = (val: Partial<Setting>, ) =>
 
 export const getPreset = () => baseApi.get("/settings/presets") as Promise<AxiosResponse<Setting[]>>;
 
-export const getAudits = (date?: string) => baseApi.get(`/audit?date=${date}`,) as Promise<AxiosResponse<Audit[]>>;
+export const getAudits = (date?: string, type : AuditType = "AUTOMATION_TRIGGER") => baseApi.get(`/audit?date=${date}&type=${type}`,) as Promise<AxiosResponse<Audit[]>>;
